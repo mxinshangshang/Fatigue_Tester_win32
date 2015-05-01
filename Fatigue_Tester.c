@@ -2,14 +2,28 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
 //#include <pthread.h>
-//#include <sys/socket.h>
-//#include <netinet/in.h>
-//#include <netdb.h>
-//#include <arpa/inet.h>
-//#include <semaphore.h>
+
+
+#define _WIN32_ 1
+
+#ifdef _WIN32_
+#include <windows.h>
+#include <winsock2.h>
+#include <WS2tcpip.h>
+//#pragma comment(lib,"ws2_32.lib")
+//#pragma comment(lib,"pthreadVC2.lib")
+#endif
+
+#ifdef _LINUX_
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <semaphore.h>
+#endif
 
 struct EntryStruct
 {
@@ -19,14 +33,12 @@ struct EntryStruct
 
 int sockfd;
 int issucceed=-1;
-//struct sockaddr_in saddr;
+struct sockaddr_in saddr;
 #define MAXSIZE 1024
 GtkTextBuffer *show_buffer,*input_buffer;
 gboolean timer = TRUE;
 /* Pixmap for scribble area, to store current scribbles */
 static cairo_surface_t *surface = NULL;
-//static cairo_surface_t *surfaceL = NULL;
-//static cairo_surface_t *surfaceB = NULL;
 
 /* Create a new surface of the appropriate size to store our scribbles */
 static gboolean
@@ -34,28 +46,26 @@ draw_configure_event (GtkWidget         *widget,
                           GdkEventConfigure *event,
                           gpointer           data)
 {
-  GtkAllocation allocation;
-  cairo_t *cr;
+	GtkAllocation allocation;
+	cairo_t *cr;
+	if (surface)
+		cairo_surface_destroy (surface);
 
-  if (surface)
-    cairo_surface_destroy (surface);
-
-  gtk_widget_get_allocation (widget, &allocation);
-  surface = gdk_window_create_similar_surface (gtk_widget_get_window (widget),
+	gtk_widget_get_allocation (widget, &allocation);
+	surface = gdk_window_create_similar_surface (gtk_widget_get_window (widget),
                                                CAIRO_CONTENT_COLOR,
                                                allocation.width,
                                                allocation.height);
 
   /* Initialize the surface to white */
-  cr = cairo_create (surface);
+	cr = cairo_create (surface);
 
-  cairo_set_source_rgb (cr, 1, 1, 1);
-  cairo_paint (cr);
+	cairo_set_source_rgb (cr, 1, 1, 1);
+	cairo_paint (cr);
 
-  cairo_destroy (cr);
-
+	cairo_destroy (cr);
   /* We've handled the configure event, no need for further processing. */
-  return TRUE;
+	return TRUE;
 }
 
 /* Redraw the screen from the surface */
@@ -144,158 +154,130 @@ gboolean time_handler (GtkWidget *widget)
 }
 
 
-//void show_err(char *err)
-//{
-//	GtkTextIter start,end;
-//	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(show_buffer),&start,&end);
-//	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,err,strlen(err));
-//}
-//
-///* show the received message */
-//void show_remote_text(char rcvd_mess[])
-//{
-//    GtkTextIter start,end;
-//    gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(show_buffer),&start,&end);/*获得缓冲区开始和结束位置的Iter*/
-//    gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"Server:\n",8);/*插入文本到缓冲区*/
-//    gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,rcvd_mess,strlen(rcvd_mess));/*插入文本到缓冲区*/
-//    gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"\n",1);/*插入换行到缓冲区*/
-//}
-//
-///* show the input text */
-//void show_local_text(const gchar* text)
-//{
-//	GtkTextIter start,end;
-//	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(show_buffer),&start,&end);/*获得缓冲区开始和结束位置的Iter*/
-//	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"Me:\n",4);/*插入文本到缓冲区*/
-//	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,text,strlen(text));/*插入文本到缓冲区*/
-//	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"\n",1);/*插入文本到缓冲区*/
-//}
-//
-///* clean the input text */
-//void on_cls_button_clicked()
-//{
-//	GtkTextIter start,end;
-//	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(input_buffer),&start,&end);/*获得缓冲区开始和结束位置的Iter*/
-//	gtk_text_buffer_delete(GTK_TEXT_BUFFER(input_buffer),&start,&end);/*插入到缓冲区*/
-//}
-//
-///* a new thread,to receive message */
-//void *recv_func(void *arg)/*recv_func(void *arg)*/
-//{
-//
-//      char rcvd_mess[MAXSIZE];
-//      while(1)
-//	{
-//		bzero(rcvd_mess,MAXSIZE);
-//		if(recv(sockfd,rcvd_mess,MAXSIZE,0)<0)  /*阻塞直到收到客户端发的消息*/
-//		{
-//			perror("server recv error\n");
-//			exit(1);
-//		}
-//		show_remote_text(rcvd_mess);
-//		//g_print ("Port: %s\n", rcvd_mess);
-//	}
-//}
-///* build socket connection */
-//int build_socket(const char *serv_ip,const char *serv_port)
-//{
-//	int res;
-//	pthread_t recv_thread;
-//	pthread_attr_t thread_attr;
-//	/* set status of thread */
-//	res=pthread_attr_init(&thread_attr);
-//	if(res!=0)
-//	{
-//		perror("Setting detached attribute failed");
-//		exit(EXIT_FAILURE);
-//	}
-//	sockfd=socket(AF_INET,SOCK_STREAM,0); /* create a socket */
-//	if(sockfd==-1)
-//	{
-//		perror("Socket Error\n");
-//		exit(1);
-//	}
-//	bzero(&saddr,sizeof(saddr));
-//	saddr.sin_family=AF_INET;
-//	saddr.sin_port=htons(atoi(serv_port));
-//	res=inet_pton(AF_INET,serv_ip,&saddr.sin_addr);
-//	if(res==0){ /* the serv_ip is invalid */
-//		return 1;
-//	}
-//	else if(res==-1){
-//		return -1;
-//	}
-//	/* set the stats of thread:means do not wait for the return value of subthread */
-//	res=pthread_attr_setdetachstate(&thread_attr,PTHREAD_CREATE_DETACHED);
-//	if(res!=0)
-//	{
-//		perror("Setting detached attribute failed");
-//		exit(EXIT_FAILURE);
-//	}
-//        res=connect(sockfd,(struct sockaddr *)&saddr,sizeof(saddr));
-//	/* Create a thread,to process the receive function. */
-//	if(res==0)
-//        {
-//       	res=pthread_create(&recv_thread,&thread_attr,&recv_func,NULL);
-//	   if(res!=0)
-//	     {
-//		perror("Thread create error\n");
-//		exit(EXIT_FAILURE);
-//	     }
-//	/* callback the attribute */
-//	     (void)pthread_attr_destroy(&thread_attr);
-//        }
-//        else
-//        {
-//		perror("Oops:connected failed\n");
-//		exit(EXIT_FAILURE);
-//        }
-//	return 0;
-//}
-///* send function */
-//void send_func(const char *text)
-//{
-//	int n;
-//	//socklen_t len=sizeof(saddr);
-//	n=send(sockfd,text,MAXSIZE,0);
-//	if(n<0)
-//	{
-//		perror("S send error\n");
-//		exit(1);
-//	}
-//}
-//
-///* get the input text,and send it */
-//void on_send_button_clicked()
-//{
-//	GtkTextIter start,end;
-//	gchar *text;
-// 	if(issucceed==-1){ /* Haven't create a socket */
-// 		show_err("Not connected...\n");
-//	}
-//	else
-//	{ /* Socket creating has succeed ,so send message */
-//		text=(gchar *)malloc(MAXSIZE);
-//		if(text==NULL)
-//		{
-//			printf("Malloc error!\n");
-//			exit(1);
-//		}
-//		/* get text */
-//		gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(input_buffer),&start,&end);
-//		text=gtk_text_buffer_get_text(GTK_TEXT_BUFFER(input_buffer),&start,&end,FALSE);
-//		/* If there is no input,do nothing but return */
-//		if(strcmp(text,"")!=0)
-//		{
-//			send_func(text);
-//			on_cls_button_clicked();
-//			show_local_text(text);
-//		}
-//		else
-//			show_err("The message can not be empty...\n");
-//		free(text);
-//	}
-//}
+void show_err(char *err)
+{
+	GtkTextIter start,end;
+	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(show_buffer),&start,&end);
+	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,err,strlen(err));
+}
+
+/* show the received message */
+void show_remote_text(char rcvd_mess[])
+{
+    GtkTextIter start,end;
+    gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(show_buffer),&start,&end);/*获得缓冲区开始和结束位置的Iter*/
+    gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"Server:\n",8);/*插入文本到缓冲区*/
+    gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,rcvd_mess,strlen(rcvd_mess));/*插入文本到缓冲区*/
+    gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"\n",1);/*插入换行到缓冲区*/
+}
+
+/* show the input text */
+void show_local_text(const gchar* text)
+{
+	GtkTextIter start,end;
+	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(show_buffer),&start,&end);/*获得缓冲区开始和结束位置的Iter*/
+	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"Me:\n",4);/*插入文本到缓冲区*/
+	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,text,strlen(text));/*插入文本到缓冲区*/
+	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"\n",1);/*插入文本到缓冲区*/
+}
+
+/* clean the input text */
+void on_cls_button_clicked()
+{
+	GtkTextIter start,end;
+	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(input_buffer),&start,&end);/*获得缓冲区开始和结束位置的Iter*/
+	gtk_text_buffer_delete(GTK_TEXT_BUFFER(input_buffer),&start,&end);/*插入到缓冲区*/
+}
+
+/* a new thread,to receive message */
+void *recv_func(void *arg)/*recv_func(void *arg)*/
+{
+
+      char rcvd_mess[MAXSIZE];
+      while(1)
+	{
+		//bzero(rcvd_mess,MAXSIZE);
+    	  memset(rcvd_mess,0,MAXSIZE);
+		if(recv(sockfd,rcvd_mess,MAXSIZE,0)<0)  /*阻塞直到收到客户端发的消息*/
+		{
+			perror("server recv error\n");
+			exit(1);
+		}
+		show_remote_text(rcvd_mess);
+		//g_print ("Port: %s\n", rcvd_mess);
+	}
+}
+/* build socket connection */
+int build_socket(const char *serv_ip,const char *serv_port)
+{
+	int res;
+	sockfd=socket(AF_INET,SOCK_STREAM,0); /* create a socket */
+	if(sockfd==-1)
+	{
+		perror("Socket Error\n");
+		exit(1);
+	}
+	memset(&saddr,0,sizeof(saddr));
+	saddr.sin_family=AF_INET;
+	saddr.sin_port=htons(atoi(serv_port));
+	saddr.sin_addr.S_un.S_addr = inet_addr(serv_ip);
+	res=connect(sockfd,(struct sockaddr *)&saddr,sizeof(saddr));
+	/* Create a thread,to process the receive function. */
+	if(res==0)
+    {
+		g_thread_new(NULL, (GThreadFunc)recv_func, NULL);
+    }
+    else
+    {
+    	perror("Oops:connected failed\n");
+    	exit(EXIT_FAILURE);
+    }
+	return 0;
+}
+/* send function */
+void send_func(const char *text)
+{
+	int n;
+	//socklen_t len=sizeof(saddr);
+	n=send(sockfd,text,MAXSIZE,0);
+	if(n<0)
+	{
+		perror("S send error\n");
+		exit(1);
+	}
+}
+
+/* get the input text,and send it */
+void on_send_button_clicked()
+{
+	GtkTextIter start,end;
+	gchar *text;
+ 	if(issucceed==-1){ /* Haven't create a socket */
+ 		show_err("Not connected...\n");
+	}
+	else
+	{ /* Socket creating has succeed ,so send message */
+		text=(gchar *)malloc(MAXSIZE);
+		if(text==NULL)
+		{
+			printf("Malloc error!\n");
+			exit(1);
+		}
+		/* get text */
+		gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(input_buffer),&start,&end);
+		text=gtk_text_buffer_get_text(GTK_TEXT_BUFFER(input_buffer),&start,&end,FALSE);
+		/* If there is no input,do nothing but return */
+		if(strcmp(text,"")!=0)
+		{
+			send_func(text);
+			on_cls_button_clicked();
+			show_local_text(text);
+		}
+		else
+			show_err("The message can not be empty...\n");
+		free(text);
+	}
+}
 
 /* Stop the GTK+ main loop function. */
 static void destroy (GtkWidget *window,gpointer data)
@@ -345,9 +327,6 @@ int main (int argc,char *argv[])
 	GtkWidget *send_view;
 	GtkWidget *send_button;
 	GtkWidget* da;
-	//GtkWidget* daLeft;
-	//GtkWidget* daBottom;
-
 	GtkWidget* menubar;
   	GtkWidget* menu;
   	GtkWidget* editmenu;
@@ -362,7 +341,6 @@ int main (int argc,char *argv[])
 
 	gtk_init (&argc, &argv);
 	struct EntryStruct entries;
-
 
 	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title (GTK_WINDOW (window), "MainWindow");
