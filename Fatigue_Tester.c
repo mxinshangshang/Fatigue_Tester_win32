@@ -11,8 +11,6 @@
 #include <windows.h>
 #include <winsock2.h>
 #include <WS2tcpip.h>
-//#pragma comment(lib,"ws2_32.lib")
-//#pragma comment(lib,"pthreadVC2.lib")
 #endif
 
 #ifdef _LINUX_
@@ -81,25 +79,12 @@ draw_callback (GtkWidget *widget,
    	cairo_paint (cr);
    	cairo_set_source_rgb(cr,0,0,0);
 	cairo_set_line_width(cr,2);
-	//cairo_move_to(cr, 25, height-25);
-	//cairo_line_to(cr, width-25, height-25);
-	//cairo_move_to(cr, 25, 25);
-	//cairo_line_to(cr, 25, height-25);
 
 	gdouble Blank=25;
 	gchar c[1];
 	gdouble i=0,x=0,y=0,x1=Blank,y1=Blank,y0=height-2*Blank,x2=width-2*Blank;
 	cairo_rectangle (cr,x1, y1, x2, y0);/*axis-y top (x1,y1);axis-zero (x1,y0);axis-x right (x2,y0)*/
-   	//for(i=y1;i<=y0+25;i=i+10)
-  	//{
-	//	cairo_move_to(cr,x1,i);
-	//	cairo_line_to(cr,x1+3,i);
- 	//}
-	//for(i=x1;i<=x2+25;i=i+10)
-	//{
-	//	cairo_move_to(cr,i,y0+25);
-	//	cairo_line_to(cr,i,y0+25-3);
-	//}
+
 	if((width-2*Blank)/100>5)//Y
 	{
 		for(i=Blank;i<(width-Blank);i=i+50)
@@ -192,19 +177,19 @@ void on_cls_button_clicked()
 /* a new thread,to receive message */
 void *recv_func(void *arg)/*recv_func(void *arg)*/
 {
-
-      char rcvd_mess[MAXSIZE];
-      while(1)
+	char rcvd_mess[MAXSIZE];
+	while(1)
 	{
 		//bzero(rcvd_mess,MAXSIZE);
-    	  memset(rcvd_mess,0,MAXSIZE);
+    	memset(rcvd_mess,0,MAXSIZE);
 		if(recv(sockfd,rcvd_mess,MAXSIZE,0)<0)  /*阻塞直到收到客户端发的消息*/
 		{
 			perror("server recv error\n");
 			exit(1);
 		}
 		show_remote_text(rcvd_mess);
-		//g_print ("Port: %s\n", rcvd_mess);
+		g_print ("rcvd_mess: %s\n", rcvd_mess);
+		g_print ("rcvd_mess________________");
 	}
 }
 /* build socket connection */
@@ -226,6 +211,8 @@ int build_socket(const char *serv_ip,const char *serv_port)
 	if(res==0)
     {
 		g_thread_new(NULL, (GThreadFunc)recv_func, NULL);
+		//g_thread_create(*recv_func, "Running", FALSE, NULL);
+		g_print("recv_func running\n");
     }
     else
     {
@@ -293,21 +280,22 @@ void on_menu_activate(GtkMenuItem* item,gpointer data)
 
 void on_button1_clicked(GtkButton *button,gpointer user_data)
 {
-//    	int res;
-//    	struct EntryStruct *entry = (struct EntryStruct *)user_data;
-//    	const gchar *serv_ip = gtk_entry_get_text(GTK_ENTRY(entry->IP));
-//    	const gchar *serv_port= gtk_entry_get_text(GTK_ENTRY(entry->Port));
-//    	g_print ("IP: %s\n", serv_ip);
-//    	g_print ("Port: %s\n", serv_port);
-//	res=build_socket(serv_ip,serv_port);
-//	if(res==1)
-//		g_print("IP Address is  Invalid...\n");
-//	else if(res==-1)
-//		g_print("Connect Failure... \n");
-//	else{
-//		g_print("Connect Successful... \n");
-//		issucceed=0;
-//	}
+    	int res;
+    	struct EntryStruct *entry = (struct EntryStruct *)user_data;
+    	const gchar *serv_ip = gtk_entry_get_text(GTK_ENTRY(entry->IP));
+    	const gchar *serv_port= gtk_entry_get_text(GTK_ENTRY(entry->Port));
+    	g_print ("IP: %s\n", serv_ip);
+    	g_print ("Port: %s\n", serv_port);
+    	res=build_socket(serv_ip,serv_port);
+    	if(res==1)
+    		g_print("IP Address is  Invalid...\n");
+    	else if(res==-1)
+    		g_print("Connect Failure... \n");
+    	else
+    	{
+    		g_print("Connect Successful... \n");
+    		issucceed=0;
+    	}
 }
 
 char *_(char *c)
@@ -359,23 +347,13 @@ int main (int argc,char *argv[])
 	send_button= gtk_button_new_with_label ("Send");
 
 	rece_view=gtk_text_view_new();
-    	send_view=gtk_text_view_new();
+    send_view=gtk_text_view_new();
 
-	//frame = gtk_frame_new (NULL);
-	//gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_IN);
 	da = gtk_drawing_area_new();
-	//daLeft = gtk_drawing_area_new();
-	//daBottom = gtk_drawing_area_new();
-      	/* set a minimum size */
-      	//gtk_widget_set_size_request (drawarea, 690, 600);
-	//gtk_widget_set_size_request (daLeft, 690, 600);
-	//gtk_widget_set_size_request (daBottom, 690, 600);
-      	//gtk_container_add (GTK_CONTAINER (frame), drawarea);
-  	//gtk_widget_set_size_request (daBottom, 100, 50);
- 	//gtk_widget_set_events (G_OBJECT(daBottom), GDK_EXPOSURE_MASK);
+
 	g_signal_connect (G_OBJECT(da), "draw",G_CALLBACK (draw_callback), NULL);
-      	g_signal_connect (G_OBJECT(da),"configure-event",G_CALLBACK (draw_configure_event), NULL);
-        g_timeout_add(100, (GSourceFunc) time_handler, (gpointer) da);
+	g_signal_connect (G_OBJECT(da),"configure-event",G_CALLBACK (draw_configure_event), NULL);
+	g_timeout_add(100, (GSourceFunc) time_handler, (gpointer) da);
 
 
 
@@ -410,21 +388,21 @@ int main (int argc,char *argv[])
     	menu=gtk_menu_new();
     	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_NEW,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
-  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(" 新建"));
+  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 新建")));
     	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_OPEN,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
-  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(" 打开"));
+  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 打开")));
     	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
-  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(" 保存"));
+  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 保存")));
     	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE_AS,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
-  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(" 另存为"));
+  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 另存为")));
     	menuitem=gtk_separator_menu_item_new();
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
     	menuitem=gtk_image_menu_item_new_from_stock( GTK_STOCK_QUIT,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
-  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)("exit"));
+  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 退出")));
   	rootmenu=gtk_menu_item_new_with_label(_(" 文件 "));
     	gtk_menu_item_set_submenu(GTK_MENU_ITEM(rootmenu),menu);
     	menubar=gtk_menu_bar_new();
@@ -433,26 +411,26 @@ int main (int argc,char *argv[])
      	editmenu=gtk_menu_new();
   	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_CUT,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(editmenu),menuitem);
-  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(" 剪切 "));
+  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 剪切 ")));
      	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_COPY,accel_group);
    	gtk_menu_shell_append(GTK_MENU_SHELL(editmenu),menuitem);
-   	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(" 复制 "));
+   	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 复制 ")));
    	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_PASTE,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(editmenu),menuitem);
-  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(" 粘贴 "));
+  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 粘贴 ")));
     	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_FIND,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(editmenu),menuitem);
-  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(" 查找 "));
+  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 查找 ")));
   	gtk_menu_item_set_submenu(GTK_MENU_ITEM(rootmenu),editmenu);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menubar),rootmenu);
     	rootmenu=gtk_menu_item_new_with_label(_(" 帮助 "));
  	helpmenu=gtk_menu_new();
  	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_HELP,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(helpmenu),menuitem);
-  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)( " 帮助 "));
+  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_( " 帮助 ")));
     	menuitem=gtk_menu_item_new_with_label(_(" 关于..."));
  	gtk_menu_shell_append(GTK_MENU_SHELL(helpmenu),menuitem);
-  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(" 关于 "));
+  	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 关于 ")));
   	gtk_menu_item_set_submenu(GTK_MENU_ITEM(rootmenu),helpmenu);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menubar),rootmenu);
 
