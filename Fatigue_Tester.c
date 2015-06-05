@@ -7,35 +7,46 @@
 
 #ifdef _WIN32_
 #include <windows.h>
+#include <winsock2.h>
+#include <mysql.h>
 #endif
 
 #ifdef _LINUX_
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <semaphore.h>
+#include <mysql/mysql.h>
 #endif
+
+MYSQL mysql;
+const gchar *server ="localhost";
+const gchar *user   ="root";
+const gchar *passwd ="12345";
+const gchar *db     ="pulse_db";
+const gchar *table  ="mytables";
+MYSQL_ROW  row = NULL;
+MYSQL_RES *res = NULL;
 
 struct EntryStruct
 {
-    	GtkEntry * IP;
+    GtkEntry * IP;
 	GtkEntry * Port;
 };
 
-//int sockfd;
 GSocket *sock;
 int issucceed=-1;
-//struct sockaddr_in saddr;
-#define MAXSIZE 1024
+#define MAXSIZE 2048
 GtkTextBuffer *show_buffer,*input_buffer;
 gboolean timer = TRUE;
 /* Pixmap for scribble area, to store current scribbles */
 static cairo_surface_t *surface = NULL;
-//static cairo_surface_t *surfaceL = NULL;
-//static cairo_surface_t *surfaceB = NULL;
+gint width, height;
+gdouble Blank=25;
+gint last_point=0;
+gint next=25;
 
 /* Create a new surface of the appropriate size to store our scribbles */
 static gboolean
@@ -57,10 +68,8 @@ draw_configure_event (GtkWidget         *widget,
 
   /* Initialize the surface to white */
   cr = cairo_create (surface);
-
   cairo_set_source_rgb (cr, 1, 1, 1);
   cairo_paint (cr);
-
   cairo_destroy (cr);
 
   /* We've handled the configure event, no need for further processing. */
@@ -73,32 +82,17 @@ draw_callback (GtkWidget *widget,
                cairo_t   *cr,
                gpointer   data)
 {
-  	gint width, height;
+//  	gint width, height;
  	width = gtk_widget_get_allocated_width (widget);
   	height = gtk_widget_get_allocated_height (widget);
    	cairo_set_source_surface (cr, surface, 0, 0);
    	cairo_paint (cr);
    	cairo_set_source_rgb(cr,0,0,0);
 	cairo_set_line_width(cr,2);
-	//cairo_move_to(cr, 25, height-25);
-	//cairo_line_to(cr, width-25, height-25);
-	//cairo_move_to(cr, 25, 25);
-	//cairo_line_to(cr, 25, height-25);
 
-	gdouble Blank=25;
 	gchar c[1];
 	gdouble i=0,x=0,y=0,x1=Blank,y1=Blank,y0=height-2*Blank,x2=width-2*Blank;
 	cairo_rectangle (cr,x1, y1, x2, y0);/*axis-y top (x1,y1);axis-zero (x1,y0);axis-x right (x2,y0)*/
-   	//for(i=y1;i<=y0+25;i=i+10)
-  	//{
-	//	cairo_move_to(cr,x1,i);
-	//	cairo_line_to(cr,x1+3,i);
- 	//}
-	//for(i=x1;i<=x2+25;i=i+10)
-	//{
-	//	cairo_move_to(cr,i,y0+25);
-	//	cairo_line_to(cr,i,y0+25-3);
-	//}
 	if((width-2*Blank)/100>5)//Y
 	{
 		for(i=Blank;i<(width-Blank);i=i+50)
@@ -135,12 +129,24 @@ draw_callback (GtkWidget *widget,
 			cairo_line_to(cr,Blank,i);
 		}
 	}
-
-        cairo_stroke(cr);
-
+    cairo_stroke(cr);
   	return FALSE;
 }
 
+void drawing_line(char rcvd_mess[])
+{
+	cairo_t *cr;
+	cr = cairo_create (surface);
+   	//cairo_set_source_surface (cr, surface, 0, 0);
+   	//cairo_paint (cr);
+   	cairo_set_source_rgb(cr,0,1,0);
+	cairo_set_line_width(cr,2);
+	cairo_move_to(cr,next,height-25-last_point*50);
+	next=next+5;
+	cairo_line_to(cr,next,height-25-atoi(rcvd_mess)*50);
+	last_point=atoi(rcvd_mess);
+    cairo_stroke(cr);
+}
 
 gboolean time_handler (GtkWidget *widget)
 {
@@ -164,20 +170,30 @@ void show_err(char *err)
 void show_remote_text(char rcvd_mess[])
 {
     GtkTextIter start,end;
+    gchar * escape, * text;
+    escape = g_strescape (rcvd_mess, NULL);
+    text = g_strconcat (escape, "\n", NULL);
     gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(show_buffer),&start,&end);/*获得缓冲区开始和结束位置的Iter*/
-    gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"Server:\n",8);/*插入文本到缓冲区*/
-    gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,rcvd_mess,strlen(rcvd_mess));/*插入文本到缓冲区*/
-    gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"\n",1);/*插入换行到缓冲区*/
+    //gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"Server:\n",8);/*插入文本到缓冲区*/
+    gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,text,strlen(text));/*插入文本到缓冲区*/
+    //gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"\n",1);/*插入换行到缓冲区*/
+    g_free (escape);
+    g_free (text);
 }
 
 /* show the input text */
 void show_local_text(const gchar* text)
 {
 	GtkTextIter start,end;
+    gchar * escape, *text1;
+    escape = g_strescape (text, NULL);
+    text1 = g_strconcat (escape, "\n", NULL);
 	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(show_buffer),&start,&end);/*获得缓冲区开始和结束位置的Iter*/
-	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"Me:\n",4);/*插入文本到缓冲区*/
-	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,text,strlen(text));/*插入文本到缓冲区*/
-	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"\n",1);/*插入文本到缓冲区*/
+	//gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"Me:\n",4);/*插入文本到缓冲区*/
+	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,text1,strlen(text1));/*插入文本到缓冲区*/
+	//gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"\n",1);/*插入文本到缓冲区*/
+	g_free (escape);
+	g_free (text1);
 }
 
 /* clean the input text */
@@ -191,20 +207,6 @@ void on_cls_button_clicked()
 /* a new thread,to receive message */
 gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
 {
-
-//      char rcvd_mess[MAXSIZE];
-//      while(1)
-//	{
-//		bzero(rcvd_mess,MAXSIZE);
-//		if(recv(sockfd,rcvd_mess,MAXSIZE,0)<0)  /*阻塞直到收到客户端发的消息*/
-//		{
-//			perror("server recv error\n");
-//			exit(1);
-//		}
-//		show_remote_text(rcvd_mess);
-//		//g_print ("Port: %s\n", rcvd_mess);
-//	}
-
 	 char rcvd_mess[MAXSIZE];
 	 GInputVector vector;
 	 GError *error = NULL;
@@ -220,67 +222,13 @@ gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
 		}
 	    g_print("Messages = %s\n", rcvd_mess);
 	    show_remote_text(rcvd_mess);
+	    drawing_line(rcvd_mess);
 	    g_print("Waiting……");
 	 }
 }
 /* build socket connection */
 int build_socket(const char *serv_ip,const char *serv_port)
 {
-//	int res;
-//	pthread_t recv_thread;
-//	pthread_attr_t thread_attr;
-//	/* set status of thread */
-//	res=pthread_attr_init(&thread_attr);
-//	if(res!=0)
-//	{
-//		perror("Setting detached attribute failed");
-//		exit(EXIT_FAILURE);
-//	}
-//	sockfd=socket(AF_INET,SOCK_STREAM,0); /* create a socket */
-//	if(sockfd==-1)
-//	{
-//		perror("Socket Error\n");
-//		exit(1);
-//	}
-//	bzero(&saddr,sizeof(saddr));
-//	saddr.sin_family=AF_INET;
-//	saddr.sin_port=htons(atoi(serv_port));
-//	res=inet_pton(AF_INET,serv_ip,&saddr.sin_addr);
-//	if(res==0){ /* the serv_ip is invalid */
-//		return 1;
-//	}
-//	else if(res==-1){
-//		return -1;
-//	}
-//	/* set the stats of thread:means do not wait for the return value of subthread */
-//	res=pthread_attr_setdetachstate(&thread_attr,PTHREAD_CREATE_DETACHED);
-//	if(res!=0)
-//	{
-//		perror("Setting detached attribute failed");
-//		exit(EXIT_FAILURE);
-//	}
-//        res=connect(sockfd,(struct sockaddr *)&saddr,sizeof(saddr));
-//	/* Create a thread,to process the receive function. */
-//	if(res==0)
-//        {
-//       	res=pthread_create(&recv_thread,&thread_attr,&recv_func,NULL);
-//	   if(res!=0)
-//	     {
-//		perror("Thread create error\n");
-//		exit(EXIT_FAILURE);
-//	     }
-//	/* callback the attribute */
-//	     (void)pthread_attr_destroy(&thread_attr);
-//        }
-//        else
-//        {
-//		perror("Oops:connected failed\n");
-//		exit(EXIT_FAILURE);
-//        }
-//	return 0;
-
-
-
 	gboolean res;
     g_type_init();
     GInetAddress *iface_address = g_inet_address_new_from_string (serv_ip);
@@ -298,8 +246,6 @@ int build_socket(const char *serv_ip,const char *serv_port)
     if(res==TRUE)
     {
     	g_thread_new(NULL,recv_func, sock);
-//        GSource *source = g_socket_create_source (sock, G_IO_IN,NULL);
-//        g_source_set_callback (source, (GSourceFunc)recv_func, NULL, NULL);
     	g_print("recv_func start...\n");
     	return 0;
     }
@@ -313,15 +259,6 @@ int build_socket(const char *serv_ip,const char *serv_port)
 void send_func(const char *text)
 {
 	int n;
-//	//socklen_t len=sizeof(saddr);
-//	n=send(sockfd,text,MAXSIZE,0);
-//	if(n<0)
-//	{
-//		perror("S send error\n");
-//		exit(1);
-//	}
-
-
 	GError *err = NULL;
 	n=g_socket_send(sock,
 	               text,
@@ -449,13 +386,13 @@ int main (int argc,char *argv[])
 	send_button= gtk_button_new_with_label ("Send");
 
 	rece_view=gtk_text_view_new();
-    	send_view=gtk_text_view_new();
+    send_view=gtk_text_view_new();
 
 	da = gtk_drawing_area_new();
 
 	g_signal_connect (G_OBJECT(da), "draw",G_CALLBACK (draw_callback), NULL);
-      	g_signal_connect (G_OBJECT(da),"configure-event",G_CALLBACK (draw_configure_event), NULL);
-        g_timeout_add(100, (GSourceFunc) time_handler, (gpointer) da);
+    g_signal_connect (G_OBJECT(da),"configure-event",G_CALLBACK (draw_configure_event), NULL);
+    g_timeout_add(100, (GSourceFunc) time_handler, (gpointer) da);
 
 
 
