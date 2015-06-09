@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define _WIN32_ 1
 
@@ -21,14 +22,11 @@
 #include <mysql/mysql.h>
 #endif
 
-MYSQL mysql;
-const gchar *server ="localhost";
-const gchar *user   ="root";
-const gchar *passwd ="12345";
-const gchar *db     ="pulse_db";
-const gchar *table  ="mytables";
-MYSQL_ROW  row = NULL;
-MYSQL_RES *res = NULL;
+FILE *DataFServer;
+time_t now;
+struct tm *curTime;
+gchar filename[256];
+gint first_time=1;
 
 struct EntryStruct
 {
@@ -37,13 +35,17 @@ struct EntryStruct
 };
 
 GSocket *sock;
-int issucceed=-1;
+gint issucceed=-1;
 #define MAXSIZE 2048
 GtkTextBuffer *show_buffer,*input_buffer;
 gboolean timer = TRUE;
 /* Pixmap for scribble area, to store current scribbles */
 static cairo_surface_t *surface = NULL;
+
 gint width, height;
+gint top_y=50,top_x=50;
+gint big_sp,small_sp;
+gint biggest=0;
 gdouble Blank=25;
 gint last_point=0;
 gint next=25;
@@ -82,69 +84,100 @@ draw_callback (GtkWidget *widget,
                cairo_t   *cr,
                gpointer   data)
 {
-//  	gint width, height;
+	gdouble i=0,x=0,y=0;
+	gchar c[1];
+
  	width = gtk_widget_get_allocated_width (widget);
   	height = gtk_widget_get_allocated_height (widget);
-   	cairo_set_source_surface (cr, surface, 0, 0);
+  	//g_print("width = %d\nheight = %d\n", width,height);
+
+  	cairo_set_source_surface (cr, surface, 0, 0);
    	cairo_paint (cr);
    	cairo_set_source_rgb(cr,0,0,0);
-	cairo_set_line_width(cr,2);
+	cairo_set_line_width(cr,0.5);
+	gdouble x1=Blank,y1=Blank,y0=height-2*Blank,x2=width-2*Blank;
+	cairo_rectangle (cr,x1, y1, x2, y0);
 
-	gchar c[1];
-	gdouble i=0,x=0,y=0,x1=Blank,y1=Blank,y0=height-2*Blank,x2=width-2*Blank;
-	cairo_rectangle (cr,x1, y1, x2, y0);/*axis-y top (x1,y1);axis-zero (x1,y0);axis-x right (x2,y0)*/
-	if((width-2*Blank)/100>5)//Y
+	if(biggest>top_y)
 	{
-		for(i=Blank;i<(width-Blank);i=i+50)
-		{
-			cairo_move_to(cr,i,Blank);
-			cairo_line_to(cr,i,height-Blank+6);
-			cairo_move_to(cr,i,height-Blank+16);
-			cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
-			cairo_set_font_size (cr, 15.0);
-			gcvt(x++, 4, c);
-			cairo_show_text(cr,c);
-		}
-		for(i=Blank;i<(width-Blank);i=i+5)
-		{
-			cairo_move_to(cr,i,height-Blank);
-			cairo_line_to(cr,i,height-Blank+3);
-		}
+		top_y=biggest/50*50+50;
 	}
-	if((height-2*Blank)/100>3)//X
+	big_sp=(height-2*Blank)/10;
+	small_sp=(height-2*Blank)/top_y;
+
+	for(i=height-Blank;i>=Blank;i=i-big_sp)//Y
 	{
-		for(i=height-Blank;i>Blank;i=i-50)
-		{
-			cairo_move_to(cr,Blank-6,i);
-			cairo_line_to(cr,width-Blank,i);
-			cairo_move_to(cr,Blank-16,i);
-			cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
-			cairo_set_font_size (cr, 15.0);
-			gcvt(y++, 4, c);
-			cairo_show_text(cr,c);
-		}
-		for(i=height-Blank;i>Blank;i=i-5)
-		{
-			cairo_move_to(cr,Blank-3,i);
-			cairo_line_to(cr,Blank,i);
-		}
+		cairo_move_to(cr,Blank-6,i);
+		cairo_line_to(cr,width-Blank,i);
+		cairo_move_to(cr,Blank-16,i);
+		cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
+		cairo_set_font_size (cr, 12.0);
+		gcvt(y, 4, c);
+		y=y+top_y/10;
+		cairo_show_text(cr,c);
 	}
+	for(i=height-Blank;i>=Blank;i=i-small_sp)
+	{
+		cairo_move_to(cr,Blank-3,i);
+		cairo_line_to(cr,Blank,i);
+	}
+	for(i=Blank;i<(width-Blank);i=i+100)
+	{
+		cairo_move_to(cr,i,Blank);
+		cairo_line_to(cr,i,height-Blank+6);
+		cairo_move_to(cr,i,height-Blank+16);
+		cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
+		cairo_set_font_size (cr, 12.0);
+		gcvt(x, 4, c);
+		x=x+100;
+		cairo_show_text(cr,c);
+	}
+	for(i=Blank;i<(width-Blank);i=i+10)
+	{
+		cairo_move_to(cr,i,height-Blank);
+		cairo_line_to(cr,i,height-Blank+3);
+	}
+
     cairo_stroke(cr);
   	return FALSE;
 }
 
 void drawing_line(char rcvd_mess[])
 {
+	//FILE *fp;
+	//gchar StrLine[1024];             //每行最大读取的字符数
+	//gchar number[50];
 	cairo_t *cr;
+	biggest=atoi(rcvd_mess);
+
 	cr = cairo_create (surface);
-   	//cairo_set_source_surface (cr, surface, 0, 0);
-   	//cairo_paint (cr);
    	cairo_set_source_rgb(cr,0,1,0);
-	cairo_set_line_width(cr,2);
-	cairo_move_to(cr,next,height-25-last_point*50);
-	next=next+5;
-	cairo_line_to(cr,next,height-25-atoi(rcvd_mess)*50);
+	cairo_set_line_width(cr,1.5);
+
+	cairo_move_to(cr,next,height-Blank-last_point*small_sp);
+	next++;
+	cairo_line_to(cr,next,height-Blank-atoi(rcvd_mess)*small_sp);
 	last_point=atoi(rcvd_mess);
+	printf("%d\n", biggest); //输出
+
+	/*
+	if((fp = fopen(file,"r")) == NULL) //判断文件是否存在及可读
+	{
+		printf("error!");
+	}
+	while (!feof(fp))
+	{
+		fgets(StrLine,1024,fp);  //读取一行
+		//printf("%s\n", StrLine); //输出
+		cairo_move_to(cr,next,height-Blank-last_point*small_sp);
+		next++;
+		cairo_line_to(cr,next,height-Blank-atoi(StrLine)*small_sp);
+		last_point=atoi(StrLine);
+		biggest=atoi(StrLine);
+		printf("%d\n", biggest); //输出
+	}
+	fclose(fp);
+	*/
     cairo_stroke(cr);
 }
 
@@ -154,7 +187,7 @@ gboolean time_handler (GtkWidget *widget)
 
   if (!timer) return FALSE;
 
-  gtk_widget_queue_draw_area(widget,0,0,600,480);
+  gtk_widget_queue_draw_area(widget,0,0,800,500);
   return TRUE;
 }
 
@@ -214,6 +247,7 @@ gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
 	 vector.size = MAXSIZE;
 	 while(1)
 	 {
+		DataFServer=fopen(filename,"a+");
 		memset(rcvd_mess,0,MAXSIZE);
 		if(g_socket_receive(sock,vector.buffer, vector.size,NULL, &error)<0)
 		{
@@ -222,10 +256,13 @@ gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
 		}
 	    g_print("Messages = %s\n", rcvd_mess);
 	    show_remote_text(rcvd_mess);
+	    fprintf(DataFServer,"%s\n",rcvd_mess);
+	    fclose(DataFServer);
 	    drawing_line(rcvd_mess);
 	    g_print("Waiting……");
 	 }
 }
+
 /* build socket connection */
 int build_socket(const char *serv_ip,const char *serv_port)
 {
@@ -476,7 +513,7 @@ int main (int argc,char *argv[])
 
 	gtk_window_add_accel_group(GTK_WINDOW(window),accel_group);
 
-	gtk_grid_attach (GTK_GRID (grid), menubar, 0, 0,800, 30);
+	gtk_grid_attach (GTK_GRID (grid), menubar, 0, 0,900, 30);
 
 	gtk_grid_attach (GTK_GRID (grid),  label1, 0, 50, 50, 30);
 	gtk_grid_attach (GTK_GRID (grid),  GTK_WIDGET(entries.IP), 50, 50, 100, 30);
@@ -486,10 +523,10 @@ int main (int argc,char *argv[])
 	gtk_grid_attach (GTK_GRID (grid),  conn_button, 0, 100, 80, 25);
 	gtk_grid_attach (GTK_GRID (grid),  close_button, 100, 100, 80, 25);
 
-	gtk_grid_attach (GTK_GRID (grid),  da, 5, 150, 600, 480);
-	gtk_grid_attach (GTK_GRID (grid),  scrolled1, 610, 150, 180, 100);
-	gtk_grid_attach (GTK_GRID (grid),  scrolled2, 610, 255, 180, 100);
-	gtk_grid_attach (GTK_GRID (grid),  send_button, 610, 360, 80, 25);
+	gtk_grid_attach (GTK_GRID (grid),  da, 5, 150, 687, 495);
+	gtk_grid_attach (GTK_GRID (grid),  scrolled1, 700, 150, 180, 100);
+	gtk_grid_attach (GTK_GRID (grid),  scrolled2, 700, 255, 180, 100);
+	gtk_grid_attach (GTK_GRID (grid),  send_button, 700, 360, 80, 25);
 
 	gtk_grid_set_row_spacing(GTK_GRID(grid),1);
 	gtk_grid_set_column_spacing (GTK_GRID(grid),1);
@@ -497,6 +534,13 @@ int main (int argc,char *argv[])
 
 
 	gtk_widget_show_all (window);
+
+    now = time(NULL);
+    curTime = localtime(&now);
+    sprintf(filename,"%04d-%02d-%02d %02d-%02d-%02d.txt",curTime->tm_year+1900,
+        curTime->tm_mon+1,curTime->tm_mday,curTime->tm_hour,curTime->tm_min,
+        curTime->tm_sec);
+
 	gtk_main ();
 	return 0;
 }
