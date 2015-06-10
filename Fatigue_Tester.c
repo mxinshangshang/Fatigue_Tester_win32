@@ -42,9 +42,9 @@ gboolean timer = TRUE;
 /* Pixmap for scribble area, to store current scribbles */
 static cairo_surface_t *surface = NULL;
 
-gint width, height;
+gdouble width, height;
 gint top_y=50,top_x=50;
-gint big_sp,small_sp;
+gdouble big_sp,small_sp;
 gint biggest=0;
 gdouble Blank=25;
 gint last_point=0;
@@ -144,11 +144,10 @@ draw_callback (GtkWidget *widget,
 
 void drawing_line(char rcvd_mess[])
 {
-	//FILE *fp;
-	//gchar StrLine[1024];             //每行最大读取的字符数
-	//gchar number[50];
+	FILE *fp;
+	gchar StrLine[1024];             //每行最大读取的字符数
 	cairo_t *cr;
-	biggest=atoi(rcvd_mess);
+	biggest=atoi(rcvd_mess)+1;
 
 	cr = cairo_create (surface);
    	cairo_set_source_rgb(cr,0,1,0);
@@ -158,27 +157,35 @@ void drawing_line(char rcvd_mess[])
 	next++;
 	cairo_line_to(cr,next,height-Blank-atoi(rcvd_mess)*small_sp);
 	last_point=atoi(rcvd_mess);
-	printf("%d\n", biggest); //输出
-
-	/*
-	if((fp = fopen(file,"r")) == NULL) //判断文件是否存在及可读
-	{
-		printf("error!");
-	}
-	while (!feof(fp))
-	{
-		fgets(StrLine,1024,fp);  //读取一行
-		//printf("%s\n", StrLine); //输出
-		cairo_move_to(cr,next,height-Blank-last_point*small_sp);
-		next++;
-		cairo_line_to(cr,next,height-Blank-atoi(StrLine)*small_sp);
-		last_point=atoi(StrLine);
-		biggest=atoi(StrLine);
-		printf("%d\n", biggest); //输出
-	}
-	fclose(fp);
-	*/
+	//g_print("%d\n", biggest); //输出
     cairo_stroke(cr);
+
+	if((last_point+1)>=top_y-50)
+	{
+		cairo_set_source_rgb (cr, 1, 1, 1);
+		cairo_paint (cr);
+		cairo_stroke(cr);
+	   	cairo_set_source_rgb(cr,0,1,0);
+		cairo_set_line_width(cr,1.5);
+		next=25;
+		last_point=0;
+		if((fp = fopen(filename,"r")) == NULL) //判断文件是否存在及可读
+		{
+			printf("error!");
+		}
+		while (!feof(fp))
+		{
+			fgets(StrLine,1024,fp);  //读取一行
+			cairo_move_to(cr,next,height-Blank-last_point*small_sp);
+			next++;
+			cairo_line_to(cr,next,height-Blank-atoi(StrLine)*small_sp);
+			last_point=atoi(StrLine);
+			biggest=atoi(StrLine);
+			printf("%d\n", biggest); //输出
+		}
+		fclose(fp);
+		cairo_stroke(cr);
+	}
 }
 
 gboolean time_handler (GtkWidget *widget)
