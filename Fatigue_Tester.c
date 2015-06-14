@@ -39,7 +39,6 @@ gint issucceed=-1;
 #define MAXSIZE 2048
 GtkTextBuffer *show_buffer,*input_buffer;
 gboolean timer = TRUE;
-/* Pixmap for scribble area, to store current scribbles */
 static cairo_surface_t *surface = NULL;
 
 gdouble width, height;
@@ -53,8 +52,8 @@ gint next=25;
 /* Create a new surface of the appropriate size to store our scribbles */
 static gboolean
 draw_configure_event (GtkWidget         *widget,
-                          GdkEventConfigure *event,
-                          gpointer           data)
+                      GdkEventConfigure *event,
+                      gpointer           data)
 {
   GtkAllocation allocation;
   cairo_t *cr;
@@ -89,21 +88,24 @@ draw_callback (GtkWidget *widget,
 
  	width = gtk_widget_get_allocated_width (widget);
   	height = gtk_widget_get_allocated_height (widget);
-  	//g_print("width = %d\nheight = %d\n", width,height);
+	gdouble x1=Blank,y1=Blank,y0=height-2*Blank,x2=width-2*Blank;
 
   	cairo_set_source_surface (cr, surface, 0, 0);
    	cairo_paint (cr);
-   	cairo_set_source_rgb(cr,0,0,0);
-	cairo_set_line_width(cr,0.5);
-	gdouble x1=Blank,y1=Blank,y0=height-2*Blank,x2=width-2*Blank;
-	cairo_rectangle (cr,x1, y1, x2, y0);
 
-	if(biggest>top_y)
-	{
-		top_y=biggest/50*50+50;
-	}
 	big_sp=(height-2*Blank)/10;
 	small_sp=(height-2*Blank)/top_y;
+
+    if(biggest>=top_y)
+	{
+		top_y=biggest/50*50+50;
+		big_sp=(height-2*Blank)/10;
+		small_sp=(height-2*Blank)/top_y;
+	}
+
+   	cairo_set_source_rgb(cr,0,0,0);
+	cairo_set_line_width(cr,0.5);
+	cairo_rectangle (cr,x1, y1, x2, y0);
 
 	for(i=height-Blank;i>=Blank;i=i-big_sp)//Y
 	{
@@ -137,30 +139,23 @@ draw_callback (GtkWidget *widget,
 		cairo_move_to(cr,i,height-Blank);
 		cairo_line_to(cr,i,height-Blank+3);
 	}
-
     cairo_stroke(cr);
+
   	return FALSE;
 }
 
-void drawing_line(char rcvd_mess[])
+void drawing_line(gchar rcvd_mess[])
 {
 	FILE *fp;
-	gchar StrLine[1024];             //每行最大读取的字符数
+	gchar StrLine[1024];
 	cairo_t *cr;
-	biggest=atoi(rcvd_mess)+1;
+	biggest=atoi(rcvd_mess);
 
 	cr = cairo_create (surface);
    	cairo_set_source_rgb(cr,0,1,0);
 	cairo_set_line_width(cr,1.5);
 
-	cairo_move_to(cr,next,height-Blank-last_point*small_sp);
-	next++;
-	cairo_line_to(cr,next,height-Blank-atoi(rcvd_mess)*small_sp);
-	last_point=atoi(rcvd_mess);
-	//g_print("%d\n", biggest); //输出
-    cairo_stroke(cr);
-
-	if((last_point+1)>=top_y-50)
+	if(atoi(rcvd_mess)>top_y-50)
 	{
 		cairo_set_source_rgb (cr, 1, 1, 1);
 		cairo_paint (cr);
@@ -171,7 +166,7 @@ void drawing_line(char rcvd_mess[])
 		last_point=0;
 		if((fp = fopen(filename,"r")) == NULL) //判断文件是否存在及可读
 		{
-			printf("error!");
+			g_print("error!");
 		}
 		while (!feof(fp))
 		{
@@ -180,12 +175,16 @@ void drawing_line(char rcvd_mess[])
 			next++;
 			cairo_line_to(cr,next,height-Blank-atoi(StrLine)*small_sp);
 			last_point=atoi(StrLine);
-			biggest=atoi(StrLine);
-			printf("%d\n", biggest); //输出
 		}
 		fclose(fp);
 		cairo_stroke(cr);
 	}
+
+	cairo_move_to(cr,next,height-Blank-last_point*small_sp);
+	next++;
+	cairo_line_to(cr,next,height-Blank-atoi(rcvd_mess)*small_sp);
+	last_point=atoi(rcvd_mess);
+    cairo_stroke(cr);
 }
 
 gboolean time_handler (GtkWidget *widget)
@@ -266,7 +265,6 @@ gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
 	    fprintf(DataFServer,"%s\n",rcvd_mess);
 	    fclose(DataFServer);
 	    drawing_line(rcvd_mess);
-	    g_print("Waiting……");
 	 }
 }
 
@@ -362,18 +360,19 @@ void on_menu_activate(GtkMenuItem* item,gpointer data)
 
 void on_button1_clicked(GtkButton *button,gpointer user_data)
 {
-    	int res;
-    	struct EntryStruct *entry = (struct EntryStruct *)user_data;
-    	const gchar *serv_ip = gtk_entry_get_text(GTK_ENTRY(entry->IP));
-    	const gchar *serv_port= gtk_entry_get_text(GTK_ENTRY(entry->Port));
-    	g_print ("IP: %s\n", serv_ip);
-    	g_print ("Port: %s\n", serv_port);
+	int res;
+	struct EntryStruct *entry = (struct EntryStruct *)user_data;
+	const gchar *serv_ip = gtk_entry_get_text(GTK_ENTRY(entry->IP));
+	const gchar *serv_port= gtk_entry_get_text(GTK_ENTRY(entry->Port));
+	g_print ("IP: %s\n", serv_ip);
+	g_print ("Port: %s\n", serv_port);
 	res=build_socket(serv_ip,serv_port);
 	if(res==1)
 		g_print("IP Address is  Invalid...\n");
 	else if(res==-1)
 		g_print("Connect Failure... \n");
-	else{
+	else
+	{
 		g_print("Connect Successful... \n");
 		issucceed=0;
 	}
@@ -408,10 +407,8 @@ int main (int argc,char *argv[])
 	GtkWidget* grid;
 	GtkWidget *scrolled1,*scrolled2;
 
-
 	gtk_init (&argc, &argv);
 	struct EntryStruct entries;
-
 
 	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title (GTK_WINDOW (window), "MainWindow");
@@ -434,33 +431,36 @@ int main (int argc,char *argv[])
 
 	da = gtk_drawing_area_new();
 
+ 	width = gtk_widget_get_allocated_width (da);
+  	height = gtk_widget_get_allocated_height (da);
+
 	g_signal_connect (G_OBJECT(da), "draw",G_CALLBACK (draw_callback), NULL);
     g_signal_connect (G_OBJECT(da),"configure-event",G_CALLBACK (draw_configure_event), NULL);
     g_timeout_add(100, (GSourceFunc) time_handler, (gpointer) da);
 
+	/* get the buffer of textbox */
+	show_buffer=gtk_text_view_get_buffer(GTK_TEXT_VIEW(rece_view));
+	input_buffer=gtk_text_view_get_buffer(GTK_TEXT_VIEW(send_view));
+	/* set textbox to diseditable */
+	gtk_text_view_set_editable(GTK_TEXT_VIEW(rece_view),FALSE);
+	/* scroll window */
+	scrolled1=gtk_scrolled_window_new(NULL,NULL);
+	scrolled2=gtk_scrolled_window_new(NULL,NULL);
+	/* create a textbox */
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled1),rece_view);
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled2),send_view);
+	/* setting of window */
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled1),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled2),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
 
 
 
-    	/* get the buffer of textbox */
-    	show_buffer=gtk_text_view_get_buffer(GTK_TEXT_VIEW(rece_view));
-    	input_buffer=gtk_text_view_get_buffer(GTK_TEXT_VIEW(send_view));
-    	/* set textbox to diseditable */
-    	gtk_text_view_set_editable(GTK_TEXT_VIEW(rece_view),FALSE);
-    	/* scroll window */
-    	scrolled1=gtk_scrolled_window_new(NULL,NULL);
-    	scrolled2=gtk_scrolled_window_new(NULL,NULL);
-    	/* create a textbox */
-    	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled1),rece_view);
-    	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled2),send_view);
-    	/* setting of window */
-    	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled1),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
-    	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled2),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
 	g_signal_connect(G_OBJECT(send_button), "clicked", G_CALLBACK(on_send_button_clicked),NULL);
 
 
 	conn_button = gtk_button_new_with_label ("Connect");
 	gtk_button_set_relief (GTK_BUTTON (conn_button), GTK_RELIEF_NONE);
-        g_signal_connect(G_OBJECT(conn_button), "clicked", G_CALLBACK(on_button1_clicked),(gpointer) &entries);
+    g_signal_connect(G_OBJECT(conn_button), "clicked", G_CALLBACK(on_button1_clicked),(gpointer) &entries);
 	/* Create a new button that has a mnemonic key of Alt+C. */
 	close_button = gtk_button_new_with_mnemonic ("Close");
 	gtk_button_set_relief (GTK_BUTTON (close_button), GTK_RELIEF_NONE);
@@ -468,68 +468,63 @@ int main (int argc,char *argv[])
 
 	accel_group=gtk_accel_group_new();
 
-    	menu=gtk_menu_new();
-    	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_NEW,accel_group);
+	menu=gtk_menu_new();
+	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_NEW,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
   	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 新建")));
-    	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_OPEN,accel_group);
+	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_OPEN,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
   	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 打开")));
-    	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE,accel_group);
+	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
   	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 保存")));
-    	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE_AS,accel_group);
+	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE_AS,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
   	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 另存为")));
-    	menuitem=gtk_separator_menu_item_new();
+	menuitem=gtk_separator_menu_item_new();
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
-    	menuitem=gtk_image_menu_item_new_from_stock( GTK_STOCK_QUIT,accel_group);
+	menuitem=gtk_image_menu_item_new_from_stock( GTK_STOCK_QUIT,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
   	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 退出")));
   	rootmenu=gtk_menu_item_new_with_label(_(" 文件 "));
-    	gtk_menu_item_set_submenu(GTK_MENU_ITEM(rootmenu),menu);
-    	menubar=gtk_menu_bar_new();
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(rootmenu),menu);
+	menubar=gtk_menu_bar_new();
   	gtk_menu_shell_append(GTK_MENU_SHELL(menubar),rootmenu);
-     	rootmenu=gtk_menu_item_new_with_label(_(" 编辑 "));
-     	editmenu=gtk_menu_new();
+ 	rootmenu=gtk_menu_item_new_with_label(_(" 编辑 "));
+ 	editmenu=gtk_menu_new();
   	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_CUT,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(editmenu),menuitem);
   	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 剪切 ")));
-     	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_COPY,accel_group);
+ 	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_COPY,accel_group);
    	gtk_menu_shell_append(GTK_MENU_SHELL(editmenu),menuitem);
    	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_("复制 ")));
    	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_PASTE,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(editmenu),menuitem);
   	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 粘贴 ")));
-    	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_FIND,accel_group);
+	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_FIND,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(editmenu),menuitem);
   	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 查找 ")));
   	gtk_menu_item_set_submenu(GTK_MENU_ITEM(rootmenu),editmenu);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menubar),rootmenu);
-    	rootmenu=gtk_menu_item_new_with_label(_(" 帮助 "));
+	rootmenu=gtk_menu_item_new_with_label(_(" 帮助 "));
  	helpmenu=gtk_menu_new();
  	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_HELP,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(helpmenu),menuitem);
   	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_( " 帮助 ")));
-    	menuitem=gtk_menu_item_new_with_label(_(" 关于..."));
+	menuitem=gtk_menu_item_new_with_label(_(" 关于..."));
  	gtk_menu_shell_append(GTK_MENU_SHELL(helpmenu),menuitem);
   	g_signal_connect(G_OBJECT(menuitem),"activate",G_CALLBACK(on_menu_activate),(gpointer)(_(" 关于 ")));
   	gtk_menu_item_set_submenu(GTK_MENU_ITEM(rootmenu),helpmenu);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menubar),rootmenu);
 
-
 	gtk_window_add_accel_group(GTK_WINDOW(window),accel_group);
-
 	gtk_grid_attach (GTK_GRID (grid), menubar, 0, 0,900, 30);
-
 	gtk_grid_attach (GTK_GRID (grid),  label1, 0, 50, 50, 30);
 	gtk_grid_attach (GTK_GRID (grid),  GTK_WIDGET(entries.IP), 50, 50, 100, 30);
 	gtk_grid_attach (GTK_GRID (grid),  label2, 150, 50, 50, 40);
 	gtk_grid_attach (GTK_GRID (grid), GTK_WIDGET(entries.Port), 200, 50, 100, 30);
-
 	gtk_grid_attach (GTK_GRID (grid),  conn_button, 0, 100, 80, 25);
 	gtk_grid_attach (GTK_GRID (grid),  close_button, 100, 100, 80, 25);
-
 	gtk_grid_attach (GTK_GRID (grid),  da, 5, 150, 687, 495);
 	gtk_grid_attach (GTK_GRID (grid),  scrolled1, 700, 150, 180, 100);
 	gtk_grid_attach (GTK_GRID (grid),  scrolled2, 700, 255, 180, 100);
@@ -538,7 +533,6 @@ int main (int argc,char *argv[])
 	gtk_grid_set_row_spacing(GTK_GRID(grid),1);
 	gtk_grid_set_column_spacing (GTK_GRID(grid),1);
 	gtk_container_add (GTK_CONTAINER (window), grid);
-
 
 	gtk_widget_show_all (window);
 
