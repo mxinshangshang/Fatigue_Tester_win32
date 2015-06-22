@@ -9,7 +9,7 @@
 #ifdef _WIN32_
 #include <windows.h>
 #include <winsock2.h>
-#include <mysql.h>
+#include "mysql.h"
 #endif
 
 #ifdef _LINUX_
@@ -22,6 +22,16 @@
 #include <mysql/mysql.h>
 #endif
 
+#define SERVER_HOST "localhost"  //mysql的远程地址
+#define SERVER_USER "root"       //数据库登录名
+#define SERVER_PWD  "12345"     //数据库登录密码
+
+#define DB_NAME     "pulse_db"   //新建数据库的名字
+#define TABLE_NAME  "mytables"   //库中的表
+
+int check_tbl(MYSQL* mysql,char *name);
+int check_db(MYSQL *mysql,char *db_name);
+
 FILE *DataFServer;
 time_t now;
 struct tm *curTime;
@@ -33,6 +43,126 @@ struct EntryStruct
     GtkEntry * IP;
 	GtkEntry * Port;
 };
+
+
+int init_db()
+{
+
+    int err=0;
+    MYSQL mysql;
+
+    if(!mysql_init(&mysql))
+    {
+        g_print("mysql_init:");
+        exit(1);
+    }
+
+    if(!mysql_real_connect(&mysql,SERVER_HOST,SERVER_USER,SERVER_PWD,NULL,0,NULL,0))
+    {
+        g_print("mysql_real_connect");
+        exit(1);
+    }
+    g_print("connected.....\n");
+
+    err = check_db(&mysql,DB_NAME);
+    if(err != 0)
+    {
+        g_print("create db is err!\n");
+        mysql_close(&mysql);
+        exit(1);
+    }
+    //select which db
+    if(mysql_select_db(&mysql,DB_NAME)) //return 0 is success ,!0 is err
+    {
+        g_print("mysql_select_db:");
+        mysql_close(&mysql);
+        exit(1);
+    }
+    //chuangjianbiao
+    if((err=check_tbl(&mysql,TABLE_NAME))!=0)
+    {
+        g_print("check_tbl is err!\n");
+        mysql_close(&mysql);
+        exit(1);
+    }
+    mysql_close(&mysql);
+    return 0;
+}
+
+int check_db(MYSQL *mysql,char *db_name)
+{
+    MYSQL_ROW row = NULL;
+    MYSQL_RES *res = NULL;
+
+    res = mysql_list_dbs(mysql,NULL);
+    if(res)
+    {
+        while((row = mysql_fetch_row(res))!=NULL)
+        {
+            g_print("db is %s\n",row[0]);
+            if(strcmp(row[0],db_name)==0)
+            {
+                g_print("find db %s\n",db_name);
+                break;
+            }
+        }
+        //mysql_list_dbs会分配内存，需要使用mysql_free_result释放
+        mysql_free_result(res);
+    }
+    if(!row)  //没有这个数据库，则建立
+    {
+        char buf[128]={0};
+        strcpy(buf,"CREATE DATABASE ");
+        strcat(buf,db_name);
+        #ifdef DEBUG
+        g_print("%s\n",buf);
+        #endif
+        if(mysql_query(mysql,buf)){
+        	g_print("Query failed (%s)\n",mysql_error(mysql));
+            exit(1);
+        }
+    }
+    return 0;
+}
+
+int check_tbl(MYSQL* mysql,char *name)
+{
+    if(name == NULL)
+        return 0;
+    MYSQL_ROW row=NULL;
+    MYSQL_RES *res = NULL;
+    res = mysql_list_tables(mysql,NULL);
+    if(res)
+    {
+        while((row = mysql_fetch_row(res))!=NULL)
+        {
+            g_print("tables is %s\n",row[0]);
+            if(strcmp(row[0],name) == 0)
+            {
+                g_print("find the table !\n");
+                break;
+            }
+        }
+        mysql_free_result(res);
+    }
+    if(!row) //create table
+    {
+        char buf[128]={0};
+        char qbuf[128]={0};
+        snprintf(buf,sizeof(buf),"%s (name VARCHAR(20),sex char(1),score int(3));",TABLE_NAME);
+        strcpy(qbuf,"CREATE TABLE ");
+        strcat(qbuf,buf);
+        //#ifdef DEBUG
+        g_print("%s\n",qbuf);
+        //#endif
+        if(mysql_query(mysql,qbuf)){
+        	g_print("Query failed (%s)\n",mysql_error(mysql));
+            exit(1);
+        }
+    }
+    return 0;
+}
+
 
 GSocket *sock;
 gint issucceed=-1;
@@ -159,10 +289,10 @@ void drawing_line(gchar rcvd_mess[])
 	{
 		cairo_set_source_rgb (cr, 1, 1, 1);
 		cairo_paint (cr);
-		cairo_stroke(cr);
+		cairo_stroke_preserve(cr);
 	   	cairo_set_source_rgb(cr,0,1,0);
 		cairo_set_line_width(cr,1.5);
-		next=25;
+		next=24;
 		last_point=0;
 		if((fp = fopen(filename,"r")) == NULL) //判断文件是否存在及可读
 		{
@@ -177,14 +307,20 @@ void drawing_line(gchar rcvd_mess[])
 			last_point=atoi(StrLine);
 		}
 		fclose(fp);
-		cairo_stroke(cr);
+		next--;
+		cairo_stroke_preserve(cr);
+	}
+
+	if(157==next)
+	{
+
 	}
 
 	cairo_move_to(cr,next,height-Blank-last_point*small_sp);
 	next++;
 	cairo_line_to(cr,next,height-Blank-atoi(rcvd_mess)*small_sp);
 	last_point=atoi(rcvd_mess);
-    cairo_stroke(cr);
+	cairo_stroke_preserve(cr);
 }
 
 gboolean time_handler (GtkWidget *widget)
@@ -543,5 +679,8 @@ int main (int argc,char *argv[])
         curTime->tm_sec);
 
 	gtk_main ();
+
+	init_db();
+
 	return 0;
 }
