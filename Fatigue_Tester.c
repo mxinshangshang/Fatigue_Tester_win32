@@ -26,17 +26,33 @@
 #define SERVER_USER "root"       //数据库登录名
 #define SERVER_PWD  "12345"     //数据库登录密码
 
-#define DB_NAME     "pulse_db"   //新建数据库的名字
+#define DB_NAME     "fatigue_test_db"   //新建数据库的名字
 #define TABLE_NAME  "mytables"   //库中的表
 
 int check_tbl(MYSQL* mysql,char *name);
 int check_db(MYSQL *mysql,char *db_name);
 
+gchar **datas;
 FILE *DataFServer;
 time_t now;
 struct tm *curTime;
 gchar filename[256];
 gint first_time=1;
+
+GSocket *sock;
+gint issucceed=-1;
+#define MAXSIZE 2048
+GtkTextBuffer *show_buffer,*input_buffer;
+gboolean timer = TRUE;
+static cairo_surface_t *surface = NULL;
+
+gdouble width, height;
+gint top_y=50,top_x=50;
+gdouble big_sp,small_sp;
+gint biggest=0;
+gdouble Blank=25;
+gint last_point=0;
+gint next=25;
 
 struct EntryStruct
 {
@@ -47,7 +63,6 @@ struct EntryStruct
 
 int init_db()
 {
-
     int err=0;
     MYSQL mysql;
 
@@ -62,9 +77,8 @@ int init_db()
         g_print("mysql_real_connect");
         exit(1);
     }
-    g_print("connected.....\n");
 
-    err = check_db(&mysql,DB_NAME);
+    err = check_db(&mysql,DB_NAME);//use check_db()
     if(err != 0)
     {
         g_print("create db is err!\n");
@@ -78,8 +92,7 @@ int init_db()
         mysql_close(&mysql);
         exit(1);
     }
-    //chuangjianbiao
-    if((err=check_tbl(&mysql,TABLE_NAME))!=0)
+    if((err=check_tbl(&mysql,TABLE_NAME))!=0)//use check_tbl()
     {
         g_print("check_tbl is err!\n");
         mysql_close(&mysql);
@@ -147,9 +160,9 @@ int check_tbl(MYSQL* mysql,char *name)
     }
     if(!row) //create table
     {
-        char buf[128]={0};
-        char qbuf[128]={0};
-        snprintf(buf,sizeof(buf),"%s (name VARCHAR(20),sex char(1),score int(3));",TABLE_NAME);
+        char buf[1024]={0};
+        char qbuf[1024]={0};
+        snprintf(buf,sizeof(buf),"%s (SN int(1),pulse1 VARCHAR(20),pulse2 VARCHAR(20),pulse3 VARCHAR(20),AD1 VARCHAR(20),AD2 VARCHAR(20),AD3 VARCHAR(20),AD4 VARCHAR(20),DI VARCHAR(20));",TABLE_NAME);
         strcpy(qbuf,"CREATE TABLE ");
         strcat(qbuf,buf);
         //#ifdef DEBUG
@@ -163,21 +176,39 @@ int check_tbl(MYSQL* mysql,char *name)
     return 0;
 }
 
+void send_to_mysql(gchar rcvd_mess[])
+{
+	gchar sql_insert[200];
+    MYSQL my_connection;
+    int res;
 
-GSocket *sock;
-gint issucceed=-1;
-#define MAXSIZE 2048
-GtkTextBuffer *show_buffer,*input_buffer;
-gboolean timer = TRUE;
-static cairo_surface_t *surface = NULL;
+    mysql_init(&my_connection);
+    if (mysql_real_connect(&my_connection,SERVER_HOST,SERVER_USER,SERVER_PWD,NULL,0,NULL,0))
+    {
+    	sprintf(sql_insert, "INSERT INTO mytables(pulse1) VALUES('%s')",rcvd_mess);
+        res = mysql_query(&my_connection, sql_insert);
 
-gdouble width, height;
-gint top_y=50,top_x=50;
-gdouble big_sp,small_sp;
-gint biggest=0;
-gdouble Blank=25;
-gint last_point=0;
-gint next=25;
+        if (!res)
+        {
+        	g_print("Inserted %lu rows\n", (unsigned long)mysql_affected_rows(&my_connection));
+        }
+        else
+        {
+            fprintf(stderr, "Insert error %d: %s\n", mysql_errno(&my_connection),
+            mysql_error(&my_connection));
+        }
+
+        mysql_close(&my_connection);
+    }
+    else
+    {
+        if (mysql_errno(&my_connection))
+        {
+            fprintf(stderr, "Connection error %d: %s\n",
+            mysql_errno(&my_connection), mysql_error(&my_connection));
+        }
+    }
+}
 
 /* Create a new surface of the appropriate size to store our scribbles */
 static gboolean
@@ -398,9 +429,10 @@ gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
 		}
 	    g_print("Messages = %s\n", rcvd_mess);
 	    show_remote_text(rcvd_mess);
-	    fprintf(DataFServer,"%s\n",rcvd_mess);
+	    fprintf(DataFServer,"%s\n",rcvd_mess); //记录到txt
 	    fclose(DataFServer);
-	    drawing_line(rcvd_mess);
+	    send_to_mysql(rcvd_mess);              //记录到mysql
+	    drawing_line(rcvd_mess);               //drawingarea 呈现
 	 }
 }
 
@@ -485,6 +517,13 @@ void on_send_button_clicked()
 /* Stop the GTK+ main loop function. */
 static void destroy (GtkWidget *window,gpointer data)
 {
+	int i;
+	for(i=0;i<360000;i++)
+	{
+		g_free(datas[i]);
+	}
+	g_free(datas);
+
 	gtk_main_quit ();
 }
 
@@ -522,6 +561,7 @@ char *_(char *c)
 
 int main (int argc,char *argv[])
 {
+	int i;
 	GtkWidget *window;
 	GtkWidget *label1;
 	GtkWidget *label2;
@@ -545,6 +585,14 @@ int main (int argc,char *argv[])
 
 	gtk_init (&argc, &argv);
 	struct EntryStruct entries;
+
+	i=0;
+	datas= (gchar **)g_malloc(sizeof(gchar *) * 360000);
+	for(i=0;i<360000;i++)
+	{
+		datas[i]=(gchar *)g_malloc(sizeof(gchar) * 30);
+	}
+
 
 	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title (GTK_WINDOW (window), "MainWindow");
