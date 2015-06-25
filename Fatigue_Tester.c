@@ -22,22 +22,18 @@
 #include <mysql/mysql.h>
 #endif
 
-#define SERVER_HOST "localhost"  //mysql的远程地址
-#define SERVER_USER "root"       //数据库登录名
-#define SERVER_PWD  "12345"     //数据库登录密码
+#define SERVER_HOST "localhost"
+#define SERVER_USER "root"
+#define SERVER_PWD  "12345"
 
-#define DB_NAME     "fatigue_test_db"   //新建数据库的名字
-#define TABLE_NAME  "mytables"   //库中的表
+#define DB_NAME     "fatigue_test_db"
+#define TABLE_NAME  "mytables"
 
 int check_tbl(MYSQL* mysql,char *name);
 int check_db(MYSQL *mysql,char *db_name);
 
 gchar **datas;
-FILE *DataFServer;
-time_t now;
-struct tm *curTime;
-gchar filename[256];
-gint first_time=1;
+gint num=0;
 
 GSocket *sock;
 gint issucceed=-1;
@@ -162,7 +158,7 @@ int check_tbl(MYSQL* mysql,char *name)
     {
         char buf[1024]={0};
         char qbuf[1024]={0};
-        snprintf(buf,sizeof(buf),"%s (SN int(1),pulse1 VARCHAR(20),pulse2 VARCHAR(20),pulse3 VARCHAR(20),AD1 VARCHAR(20),AD2 VARCHAR(20),AD3 VARCHAR(20),AD4 VARCHAR(20),DI VARCHAR(20));",TABLE_NAME);
+        snprintf(buf,sizeof(buf),"%s (SN INTEGER AUTO_INCREMENT NOT NULL,pulse1 VARCHAR(20),pulse2 VARCHAR(20),pulse3 VARCHAR(20),AD1 VARCHAR(20),AD2 VARCHAR(20),AD3 VARCHAR(20),AD4 VARCHAR(20),DI VARCHAR(20));",TABLE_NAME);
         strcpy(qbuf,"CREATE TABLE ");
         strcat(qbuf,buf);
         //#ifdef DEBUG
@@ -245,6 +241,7 @@ draw_callback (GtkWidget *widget,
                gpointer   data)
 {
 	gdouble i=0,x=0,y=0;
+	gint j=0,x_o;
 	gchar c[1];
 
  	width = gtk_widget_get_allocated_width (widget);
@@ -257,6 +254,7 @@ draw_callback (GtkWidget *widget,
 	big_sp=(height-2*Blank)/10;
 	small_sp=(height-2*Blank)/top_y;
 
+	biggest=atoi(datas[num-1]);
     if(biggest>=top_y)
 	{
 		top_y=biggest/50*50+50;
@@ -284,6 +282,10 @@ draw_callback (GtkWidget *widget,
 		cairo_move_to(cr,Blank-3,i);
 		cairo_line_to(cr,Blank,i);
 	}
+	if(num>700)
+	{
+		x=((num-700)/100+1)*100;
+	}
 	for(i=Blank;i<(width-Blank);i=i+100)
 	{
 		cairo_move_to(cr,i,Blank);
@@ -302,56 +304,32 @@ draw_callback (GtkWidget *widget,
 	}
     cairo_stroke(cr);
 
-  	return FALSE;
-}
-
-void drawing_line(gchar rcvd_mess[])
-{
-	FILE *fp;
-	gchar StrLine[1024];
-	cairo_t *cr;
-	biggest=atoi(rcvd_mess);
-
-	cr = cairo_create (surface);
-   	cairo_set_source_rgb(cr,0,1,0);
-	cairo_set_line_width(cr,1.5);
-
-	if(atoi(rcvd_mess)>top_y-50)
-	{
-		cairo_set_source_rgb (cr, 1, 1, 1);
-		cairo_paint (cr);
-		cairo_stroke_preserve(cr);
-	   	cairo_set_source_rgb(cr,0,1,0);
-		cairo_set_line_width(cr,1.5);
+    if(datas[0]!=NULL)
+    {
+       	cairo_set_source_rgb(cr,0,1,0);
+    	cairo_set_line_width(cr,1.5);
 		next=24;
 		last_point=0;
-		if((fp = fopen(filename,"r")) == NULL) //判断文件是否存在及可读
+
+		if(num>700)
 		{
-			g_print("error!");
+			x_o=((num-700)/100+1)*100;
 		}
-		while (!feof(fp))
+		else x_o=0;
+
+		for(j=x_o;j<num;j++)
 		{
-			fgets(StrLine,1024,fp);  //读取一行
+			g_print("datas:%s\n",datas[j]);
 			cairo_move_to(cr,next,height-Blank-last_point*small_sp);
 			next++;
-			cairo_line_to(cr,next,height-Blank-atoi(StrLine)*small_sp);
-			last_point=atoi(StrLine);
+			cairo_line_to(cr,next,height-Blank-atoi(datas[j])*small_sp);
+			last_point=atoi(datas[j]);
 		}
-		fclose(fp);
+
 		next--;
 		cairo_stroke_preserve(cr);
-	}
-
-	if(157==next)
-	{
-
-	}
-
-	cairo_move_to(cr,next,height-Blank-last_point*small_sp);
-	next++;
-	cairo_line_to(cr,next,height-Blank-atoi(rcvd_mess)*small_sp);
-	last_point=atoi(rcvd_mess);
-	cairo_stroke_preserve(cr);
+    }
+  	return FALSE;
 }
 
 gboolean time_handler (GtkWidget *widget)
@@ -420,7 +398,6 @@ gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
 	 vector.size = MAXSIZE;
 	 while(1)
 	 {
-		DataFServer=fopen(filename,"a+");
 		memset(rcvd_mess,0,MAXSIZE);
 		if(g_socket_receive(sock,vector.buffer, vector.size,NULL, &error)<0)
 		{
@@ -429,10 +406,10 @@ gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
 		}
 	    g_print("Messages = %s\n", rcvd_mess);
 	    show_remote_text(rcvd_mess);
-	    fprintf(DataFServer,"%s\n",rcvd_mess); //记录到txt
-	    fclose(DataFServer);
 	    send_to_mysql(rcvd_mess);              //记录到mysql
-	    drawing_line(rcvd_mess);               //drawingarea 呈现
+	    //drawing_line(rcvd_mess);               //drawingarea 呈现
+		strcpy(datas[num],rcvd_mess);
+		num++;
 	 }
 }
 
@@ -548,6 +525,7 @@ void on_button1_clicked(GtkButton *button,gpointer user_data)
 		g_print("Connect Failure... \n");
 	else
 	{
+		init_db();
 		g_print("Connect Successful... \n");
 		issucceed=0;
 	}
@@ -720,15 +698,7 @@ int main (int argc,char *argv[])
 
 	gtk_widget_show_all (window);
 
-    now = time(NULL);
-    curTime = localtime(&now);
-    sprintf(filename,"%04d-%02d-%02d %02d-%02d-%02d.txt",curTime->tm_year+1900,
-        curTime->tm_mon+1,curTime->tm_mday,curTime->tm_hour,curTime->tm_min,
-        curTime->tm_sec);
-
 	gtk_main ();
-
-	init_db();
 
 	return 0;
 }
