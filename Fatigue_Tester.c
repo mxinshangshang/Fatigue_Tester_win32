@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 #define _WIN32_ 1
 
@@ -158,7 +157,7 @@ int check_tbl(MYSQL* mysql,char *name)
     {
         char buf[1024]={0};
         char qbuf[1024]={0};
-        snprintf(buf,sizeof(buf),"%s (SN INTEGER AUTO_INCREMENT NOT NULL,pulse1 VARCHAR(20),pulse2 VARCHAR(20),pulse3 VARCHAR(20),AD1 VARCHAR(20),AD2 VARCHAR(20),AD3 VARCHAR(20),AD4 VARCHAR(20),DI VARCHAR(20));",TABLE_NAME);
+        snprintf(buf,sizeof(buf),"%s (SN INT(10) AUTO_INCREMENT NOT NULL,pulse1 VARCHAR(20),pulse2 VARCHAR(20),pulse3 VARCHAR(20),AD1 VARCHAR(20),AD2 VARCHAR(20),AD3 VARCHAR(20),AD4 VARCHAR(20),DI VARCHAR(20),PRIMARY KEY (SN));",TABLE_NAME);
         strcpy(qbuf,"CREATE TABLE ");
         strcat(qbuf,buf);
         //#ifdef DEBUG
@@ -179,7 +178,7 @@ void send_to_mysql(gchar rcvd_mess[])
     int res;
 
     mysql_init(&my_connection);
-    if (mysql_real_connect(&my_connection,SERVER_HOST,SERVER_USER,SERVER_PWD,NULL,0,NULL,0))
+    if (mysql_real_connect(&my_connection,SERVER_HOST,SERVER_USER,SERVER_PWD,DB_NAME,0,NULL,0))
     {
     	sprintf(sql_insert, "INSERT INTO mytables(pulse1) VALUES('%s')",rcvd_mess);
         res = mysql_query(&my_connection, sql_insert);
@@ -254,7 +253,11 @@ draw_callback (GtkWidget *widget,
 	big_sp=(height-2*Blank)/10;
 	small_sp=(height-2*Blank)/top_y;
 
-	biggest=atoi(datas[num-1]);
+	if(num>=1)
+	{
+		biggest=atoi(datas[num-1]);
+	}
+	else biggest=0;
     if(biggest>=top_y)
 	{
 		top_y=biggest/50*50+50;
@@ -286,7 +289,7 @@ draw_callback (GtkWidget *widget,
 	{
 		x=((num-700)/100+1)*100;
 	}
-	for(i=Blank;i<(width-Blank);i=i+100)
+	for(i=Blank;i<(width-Blank);i=i+100)//X
 	{
 		cairo_move_to(cr,i,Blank);
 		cairo_line_to(cr,i,height-Blank+6);
@@ -325,7 +328,6 @@ draw_callback (GtkWidget *widget,
 			cairo_line_to(cr,next,height-Blank-atoi(datas[j])*small_sp);
 			last_point=atoi(datas[j]);
 		}
-
 		next--;
 		cairo_stroke_preserve(cr);
     }
@@ -407,7 +409,6 @@ gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
 	    g_print("Messages = %s\n", rcvd_mess);
 	    show_remote_text(rcvd_mess);
 	    send_to_mysql(rcvd_mess);              //¼ÇÂ¼µ½mysql
-	    //drawing_line(rcvd_mess);               //drawingarea ³ÊÏÖ
 		strcpy(datas[num],rcvd_mess);
 		num++;
 	 }
