@@ -31,7 +31,7 @@
 int check_tbl(MYSQL* mysql,char *name);
 int check_db(MYSQL *mysql,char *db_name);
 
-gchar **datas;
+gint **datas;
 gint num=0;
 
 GSocket *sock;
@@ -46,7 +46,7 @@ gint top_y=50,top_x=50;
 gdouble big_sp,small_sp;
 gint biggest=0;
 gdouble Blank=25;
-gint last_point=0;
+gint last_point[8];
 gint next=25;
 
 struct EntryStruct
@@ -122,9 +122,6 @@ int check_db(MYSQL *mysql,char *db_name)
         char buf[128]={0};
         strcpy(buf,"CREATE DATABASE ");
         strcat(buf,db_name);
-        #ifdef DEBUG
-        g_print("%s\n",buf);
-        #endif
         if(mysql_query(mysql,buf)){
         	g_print("Query failed (%s)\n",mysql_error(mysql));
             exit(1);
@@ -157,12 +154,9 @@ int check_tbl(MYSQL* mysql,char *name)
     {
         char buf[1024]={0};
         char qbuf[1024]={0};
-        snprintf(buf,sizeof(buf),"%s (SN INT(10) AUTO_INCREMENT NOT NULL,pulse1 VARCHAR(20),pulse2 VARCHAR(20),pulse3 VARCHAR(20),AD1 VARCHAR(20),AD2 VARCHAR(20),AD3 VARCHAR(20),AD4 VARCHAR(20),DI VARCHAR(20),PRIMARY KEY (SN));",TABLE_NAME);
+        snprintf(buf,sizeof(buf),"%s (SN INT(10) AUTO_INCREMENT NOT NULL,pulse1 INT(10),pulse2 INT(10),pulse3 INT(10),AD1 INT(10),AD2 INT(10),AD3 INT(10),AD4 INT(10),DI INT(10),PRIMARY KEY (SN));",TABLE_NAME);
         strcpy(qbuf,"CREATE TABLE ");
         strcat(qbuf,buf);
-        //#ifdef DEBUG
-        g_print("%s\n",qbuf);
-        //#endif
         if(mysql_query(mysql,qbuf)){
         	g_print("Query failed (%s)\n",mysql_error(mysql));
             exit(1);
@@ -171,16 +165,16 @@ int check_tbl(MYSQL* mysql,char *name)
     return 0;
 }
 
-void send_to_mysql(gchar rcvd_mess[])
+void send_to_mysql(gint rcvd_mess[])
 {
 	gchar sql_insert[200];
     MYSQL my_connection;
-    int res;
+    gint res;
 
     mysql_init(&my_connection);
     if (mysql_real_connect(&my_connection,SERVER_HOST,SERVER_USER,SERVER_PWD,DB_NAME,0,NULL,0))
     {
-    	sprintf(sql_insert, "INSERT INTO mytables(pulse1) VALUES('%s')",rcvd_mess);
+    	sprintf(sql_insert, "INSERT INTO mytables(pulse1,pulse2,pulse3,AD1,AD2,AD3,AD4,DI) VALUES('%d','%d','%d','%d','%d','%d','%d','%d')",rcvd_mess[0],rcvd_mess[1],rcvd_mess[2],rcvd_mess[3],rcvd_mess[4],rcvd_mess[5],rcvd_mess[6],rcvd_mess[7]);
         res = mysql_query(&my_connection, sql_insert);
 
         if (!res)
@@ -239,13 +233,17 @@ draw_callback (GtkWidget *widget,
                cairo_t   *cr,
                gpointer   data)
 {
-	gdouble i=0,x=0,y=0;
+	gdouble i=0,x=0,y=0,x1,y1,y0,x2;
 	gint j=0,x_o;
 	gchar c[1];
+	gint recv[8];
 
  	width = gtk_widget_get_allocated_width (widget);
   	height = gtk_widget_get_allocated_height (widget);
-	gdouble x1=Blank,y1=Blank,y0=height-2*Blank,x2=width-2*Blank;
+	x1=Blank;
+	y1=Blank;
+	y0=height-2*Blank;
+	x2=width-2*Blank;
 
   	cairo_set_source_surface (cr, surface, 0, 0);
    	cairo_paint (cr);
@@ -255,7 +253,11 @@ draw_callback (GtkWidget *widget,
 
 	if(num>=1)
 	{
-		biggest=atoi(datas[num-1]);
+		recv[0]=datas[num-1][0];
+		recv[1]=datas[num-1][1];
+		//biggest=atoi(datas[num-1]);
+		if(recv[0]>recv[1]) biggest=recv[0];
+		else biggest=recv[1];
 	}
 	else biggest=0;
     if(biggest>=top_y)
@@ -309,10 +311,10 @@ draw_callback (GtkWidget *widget,
 
     if(datas[0]!=NULL)
     {
-       	cairo_set_source_rgb(cr,0,1,0);
-    	cairo_set_line_width(cr,1.5);
-		next=24;
-		last_point=0;
+    	for(j=0;j<8;j++)
+    	{
+    		last_point[j]=0;
+    	}
 
 		if(num>700)
 		{
@@ -320,16 +322,30 @@ draw_callback (GtkWidget *widget,
 		}
 		else x_o=0;
 
+		next=24;
 		for(j=x_o;j<num;j++)
 		{
-			g_print("datas:%s\n",datas[j]);
-			cairo_move_to(cr,next,height-Blank-last_point*small_sp);
+	       	cairo_set_source_rgb(cr,0,1,0);
+	    	cairo_set_line_width(cr,1.5);
+			recv[0]=datas[j][0];
+			g_print("datas:%d\n",recv[0]);
+			cairo_move_to(cr,next,height-Blank-last_point[0]*small_sp);
 			next++;
-			cairo_line_to(cr,next,height-Blank-atoi(datas[j])*small_sp);
-			last_point=atoi(datas[j]);
+			cairo_line_to(cr,next,height-Blank-recv[0]*small_sp);
+			last_point[0]=recv[0];
+		    cairo_stroke(cr);
+
+	       	cairo_set_source_rgb(cr,1,0,0);
+	    	cairo_set_line_width(cr,1.5);
+			recv[1]=datas[j][1];
+			g_print("datas:%d\n",recv[1]);
+			cairo_move_to(cr,next,height-Blank-last_point[1]*small_sp);
+			next++;
+			cairo_line_to(cr,next,height-Blank-recv[1]*small_sp);
+			last_point[1]=recv[1];
+		    cairo_stroke(cr);
 		}
 		next--;
-		cairo_stroke_preserve(cr);
     }
   	return FALSE;
 }
@@ -393,11 +409,15 @@ void on_cls_button_clicked()
 /* a new thread,to receive message */
 gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
 {
-	 char rcvd_mess[MAXSIZE];
+	 gchar rcvd_mess[MAXSIZE];
+	 gint bufferIn[8];
+	 gint i;
 	 GInputVector vector;
 	 GError *error = NULL;
-	 vector.buffer = rcvd_mess;
-	 vector.size = MAXSIZE;
+	 //vector.buffer = rcvd_mess;
+	 vector.buffer = bufferIn;
+	 //vector.size = MAXSIZE;
+	 vector.size = 32;
 	 while(1)
 	 {
 		memset(rcvd_mess,0,MAXSIZE);
@@ -406,10 +426,14 @@ gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
 			perror("server recv error\n");
 			exit(1);
 		}
-	    g_print("Messages = %s\n", rcvd_mess);
-	    show_remote_text(rcvd_mess);
-	    send_to_mysql(rcvd_mess);              //记录到mysql
-		strcpy(datas[num],rcvd_mess);
+	    send_to_mysql(bufferIn);              //记录到mysql
+	    g_print("header is  %d %d %d %d %d %d %d %d:\n",bufferIn[0],bufferIn[1],bufferIn[2],bufferIn[3],bufferIn[4],bufferIn[5],bufferIn[6],bufferIn[7]);
+		//strcpy(datas[num],bufferIn);
+		//num++;
+	    for(i=0;i<8;i++)
+	    {
+	    	datas[num][i]=bufferIn[i];
+	    }
 		num++;
 	 }
 }
@@ -566,10 +590,10 @@ int main (int argc,char *argv[])
 	struct EntryStruct entries;
 
 	i=0;
-	datas= (gchar **)g_malloc(sizeof(gchar *) * 360000);
+	datas= (gint **)g_malloc(sizeof(gint *) * 360000);
 	for(i=0;i<360000;i++)
 	{
-		datas[i]=(gchar *)g_malloc(sizeof(gchar) * 30);
+		datas[i]=(gint *)g_malloc(sizeof(gint) * 8);
 	}
 
 
