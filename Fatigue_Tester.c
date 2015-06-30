@@ -255,7 +255,6 @@ draw_callback (GtkWidget *widget,
 	{
 		recv[0]=datas[num-1][0];
 		recv[1]=datas[num-1][1];
-		//biggest=atoi(datas[num-1]);
 		if(recv[0]>recv[1]) biggest=recv[0];
 		else biggest=recv[1];
 	}
@@ -328,17 +327,16 @@ draw_callback (GtkWidget *widget,
 	       	cairo_set_source_rgb(cr,0,1,0);
 	    	cairo_set_line_width(cr,1.5);
 			recv[0]=datas[j][0];
-			g_print("datas:%d\n",recv[0]);
 			cairo_move_to(cr,next,height-Blank-last_point[0]*small_sp);
 			next++;
 			cairo_line_to(cr,next,height-Blank-recv[0]*small_sp);
 			last_point[0]=recv[0];
 		    cairo_stroke(cr);
 
+		    next--;
 	       	cairo_set_source_rgb(cr,1,0,0);
 	    	cairo_set_line_width(cr,1.5);
 			recv[1]=datas[j][1];
-			g_print("datas:%d\n",recv[1]);
 			cairo_move_to(cr,next,height-Blank-last_point[1]*small_sp);
 			next++;
 			cairo_line_to(cr,next,height-Blank-recv[1]*small_sp);
@@ -376,9 +374,7 @@ void show_remote_text(char rcvd_mess[])
     escape = g_strescape (rcvd_mess, NULL);
     text = g_strconcat (escape, "\n", NULL);
     gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(show_buffer),&start,&end);/*获得缓冲区开始和结束位置的Iter*/
-    //gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"Server:\n",8);/*插入文本到缓冲区*/
     gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,text,strlen(text));/*插入文本到缓冲区*/
-    //gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"\n",1);/*插入换行到缓冲区*/
     g_free (escape);
     g_free (text);
 }
@@ -391,9 +387,7 @@ void show_local_text(const gchar* text)
     escape = g_strescape (text, NULL);
     text1 = g_strconcat (escape, "\n", NULL);
 	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(show_buffer),&start,&end);/*获得缓冲区开始和结束位置的Iter*/
-	//gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"Me:\n",4);/*插入文本到缓冲区*/
 	gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,text1,strlen(text1));/*插入文本到缓冲区*/
-	//gtk_text_buffer_insert(GTK_TEXT_BUFFER(show_buffer),&end,"\n",1);/*插入文本到缓冲区*/
 	g_free (escape);
 	g_free (text1);
 }
@@ -407,16 +401,14 @@ void on_cls_button_clicked()
 }
 
 /* a new thread,to receive message */
-gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
+gpointer recv_func(gpointer arg)
 {
 	 gchar rcvd_mess[MAXSIZE];
 	 gint bufferIn[8];
 	 gint i;
 	 GInputVector vector;
 	 GError *error = NULL;
-	 //vector.buffer = rcvd_mess;
 	 vector.buffer = bufferIn;
-	 //vector.size = MAXSIZE;
 	 vector.size = 32;
 	 while(1)
 	 {
@@ -428,8 +420,6 @@ gpointer recv_func(gpointer arg)/*recv_func(void *arg)*/
 		}
 	    send_to_mysql(bufferIn);              //记录到mysql
 	    g_print("header is  %d %d %d %d %d %d %d %d:\n",bufferIn[0],bufferIn[1],bufferIn[2],bufferIn[3],bufferIn[4],bufferIn[5],bufferIn[6],bufferIn[7]);
-		//strcpy(datas[num],bufferIn);
-		//num++;
 	    for(i=0;i<8;i++)
 	    {
 	    	datas[num][i]=bufferIn[i];
