@@ -51,10 +51,19 @@ gint next=25;
 
 struct EntryStruct
 {
-    GtkEntry * IP;
-	GtkEntry * Port;
+    GtkEntry *IP;
+	GtkEntry *Port;
 };
 
+struct EntryStruct1
+{
+    GtkEntry *DA1;
+	GtkEntry *DA2;
+	GtkEntry *D0;
+	GtkEntry *PWM;
+	GtkEntry *PMW_Duty;
+	GtkEntry *PWM_DIR;
+};
 
 int init_db()
 {
@@ -233,17 +242,13 @@ draw_callback (GtkWidget *widget,
                cairo_t   *cr,
                gpointer   data)
 {
-	gdouble i=0,x=0,y=0,x1,y1,y0,x2;
+	gdouble i=0,x=0,y=0;
 	gint j=0,x_o;
 	gchar c[1];
 	gint recv[8];
 
  	width = gtk_widget_get_allocated_width (widget);
   	height = gtk_widget_get_allocated_height (widget);
-	x1=Blank;
-	y1=Blank;
-	y0=height-2*Blank;
-	x2=width-2*Blank;
 
   	cairo_set_source_surface (cr, surface, 0, 0);
    	cairo_paint (cr);
@@ -258,7 +263,25 @@ draw_callback (GtkWidget *widget,
 		if(recv[0]>recv[1]) biggest=recv[0];
 		else biggest=recv[1];
 	}
-	else biggest=0;
+	/*
+	if(num>=1)
+	{
+		recv[0]=datas[num-1][0];
+		recv[1]=datas[num-1][1];
+		recv[2]=datas[num-1][2];
+		if(recv[0]>recv[1])
+		{
+			if(recv[3]>recv[0]) biggest=recv[3];
+			else biggest=recv[0];
+		}
+		else
+		{
+			if(recv[3]>recv[1]) biggest=recv[3];
+			else biggest=recv[1];
+		}
+	}
+	*/
+	else biggest=50;
     if(biggest>=top_y)
 	{
 		top_y=biggest/50*50+50;
@@ -268,7 +291,7 @@ draw_callback (GtkWidget *widget,
 
    	cairo_set_source_rgb(cr,0,0,0);
 	cairo_set_line_width(cr,0.5);
-	cairo_rectangle (cr,x1, y1, x2, y0);
+	cairo_rectangle (cr,Blank, Blank, width-2*Blank, height-2*Blank);
 
 	for(i=height-Blank;i>=Blank;i=i-big_sp)//Y
 	{
@@ -554,32 +577,29 @@ char *_(char *c)
 
 int main (int argc,char *argv[])
 {
-	int i;
+	int i=0;
 	GtkWidget *window;
-	GtkWidget *label1;
-	GtkWidget *label2;
-	GtkWidget *conn_button;
-	GtkWidget *close_button;
+	GtkWidget *label1,*label2,*label3,*label4,*label5,*label6,*label7,*label8;
+	GtkWidget *conn_button,*close_button,*send_button;
 	GtkWidget *rece_view;
 	GtkWidget *send_view;
-	GtkWidget *send_button;
-	GtkWidget* da;
+	GtkWidget *da;
 
-	GtkWidget* menubar;
-  	GtkWidget* menu;
-  	GtkWidget* editmenu;
-  	GtkWidget* helpmenu;
-  	GtkWidget* rootmenu;
-  	GtkWidget* menuitem;
-  	GtkAccelGroup* accel_group;
+	GtkWidget *menubar;
+  	GtkWidget *menu;
+  	GtkWidget *editmenu;
+  	GtkWidget *helpmenu;
+  	GtkWidget *rootmenu;
+  	GtkWidget *menuitem;
+  	GtkAccelGroup *accel_group;
 
-	GtkWidget* grid;
+	GtkWidget *grid;
 	GtkWidget *scrolled1,*scrolled2;
 
 	gtk_init (&argc, &argv);
 	struct EntryStruct entries;
+	struct EntryStruct1 entries1;
 
-	i=0;
 	datas= (gint **)g_malloc(sizeof(gint *) * 360000);
 	for(i=0;i<360000;i++)
 	{
@@ -588,7 +608,7 @@ int main (int argc,char *argv[])
 
 
 	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title (GTK_WINDOW (window), "MainWindow");
+	gtk_window_set_title (GTK_WINDOW (window), "Window For Fatigue-Test");
 	gtk_container_set_border_width (GTK_CONTAINER (window), 0);
 	gtk_widget_set_size_request (window, 800, 600);
 	g_signal_connect (G_OBJECT (window), "destroy",G_CALLBACK (destroy), NULL);
@@ -597,8 +617,20 @@ int main (int argc,char *argv[])
 
 	label1 = gtk_label_new ("IP:");
 	label2 = gtk_label_new ("Port:");
+	label3 = gtk_label_new ("DA1:");
+	label4 = gtk_label_new ("DA2:");
+	label5 = gtk_label_new ("D0:");
+	label6 = gtk_label_new ("PWM:");
+	label7 = gtk_label_new ("Duty Cycle:");
+	label8 = gtk_label_new ("PWM-DIR:");
 	entries.IP = (GtkEntry*)gtk_entry_new ();
 	entries.Port = (GtkEntry*)gtk_entry_new ();
+	entries1.DA1 = (GtkEntry*)gtk_entry_new ();
+	entries1.DA2 = (GtkEntry*)gtk_entry_new ();
+	entries1.D0 = (GtkEntry*)gtk_entry_new ();
+	entries1.PWM = (GtkEntry*)gtk_entry_new ();
+	entries1.PMW_Duty = (GtkEntry*)gtk_entry_new ();
+	entries1.PWM_DIR = (GtkEntry*)gtk_entry_new ();
 	rece_view = gtk_text_view_new ();
 	send_view = gtk_text_view_new ();
 	send_button= gtk_button_new_with_label ("Send");
@@ -613,7 +645,7 @@ int main (int argc,char *argv[])
 
 	g_signal_connect (G_OBJECT(da), "draw",G_CALLBACK (draw_callback), NULL);
     g_signal_connect (G_OBJECT(da),"configure-event",G_CALLBACK (draw_configure_event), NULL);
-    g_timeout_add(100, (GSourceFunc) time_handler, (gpointer) da);
+    g_timeout_add(10, (GSourceFunc) time_handler, (gpointer) da);
 
 	/* get the buffer of textbox */
 	show_buffer=gtk_text_view_get_buffer(GTK_TEXT_VIEW(rece_view));
@@ -642,6 +674,7 @@ int main (int argc,char *argv[])
 	close_button = gtk_button_new_with_mnemonic ("Close");
 	gtk_button_set_relief (GTK_BUTTON (close_button), GTK_RELIEF_NONE);
 	g_signal_connect_swapped (G_OBJECT (close_button), "clicked",G_CALLBACK (gtk_widget_destroy),(gpointer) window);
+	g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(gtk_widget_destroy), NULL);
 
 	accel_group=gtk_accel_group_new();
 
@@ -695,17 +728,31 @@ int main (int argc,char *argv[])
   	gtk_menu_shell_append(GTK_MENU_SHELL(menubar),rootmenu);
 
 	gtk_window_add_accel_group(GTK_WINDOW(window),accel_group);
-	gtk_grid_attach (GTK_GRID (grid), menubar, 0, 0,900, 30);
+	//void gtk_grid_attach (GtkGrid  *grid,GtkWidget *child,gint left,gint top,gint width,gint height);
+	gtk_grid_attach (GTK_GRID (grid), menubar, 0, 0,850, 30);
 	gtk_grid_attach (GTK_GRID (grid),  label1, 0, 50, 50, 30);
 	gtk_grid_attach (GTK_GRID (grid),  GTK_WIDGET(entries.IP), 50, 50, 100, 30);
 	gtk_grid_attach (GTK_GRID (grid),  label2, 150, 50, 50, 40);
 	gtk_grid_attach (GTK_GRID (grid), GTK_WIDGET(entries.Port), 200, 50, 100, 30);
-	gtk_grid_attach (GTK_GRID (grid),  conn_button, 0, 100, 80, 25);
-	gtk_grid_attach (GTK_GRID (grid),  close_button, 100, 100, 80, 25);
+	gtk_grid_attach (GTK_GRID (grid),  conn_button, 0, 100, 80, 30);
+	gtk_grid_attach (GTK_GRID (grid),  close_button, 100, 100, 80, 30);
 	gtk_grid_attach (GTK_GRID (grid),  da, 5, 150, 687, 495);
-	gtk_grid_attach (GTK_GRID (grid),  scrolled1, 700, 150, 180, 100);
-	gtk_grid_attach (GTK_GRID (grid),  scrolled2, 700, 255, 180, 100);
-	gtk_grid_attach (GTK_GRID (grid),  send_button, 700, 360, 80, 25);
+	gtk_grid_attach (GTK_GRID (grid),  scrolled1, 700, 150, 115, 100);
+	gtk_grid_attach (GTK_GRID (grid),  label3, 690, 250, 80, 50);
+	gtk_grid_attach (GTK_GRID (grid),  GTK_WIDGET(entries1.DA1), 765, 250, 50, 50);
+	gtk_grid_attach (GTK_GRID (grid),  label4, 690, 280, 80, 50);
+	gtk_grid_attach (GTK_GRID (grid),  GTK_WIDGET(entries1.DA2), 765, 280, 50, 50);
+	gtk_grid_attach (GTK_GRID (grid),  label5, 690, 310, 80, 50);
+	gtk_grid_attach (GTK_GRID (grid),  GTK_WIDGET(entries1.D0), 765, 310, 50, 50);
+	gtk_grid_attach (GTK_GRID (grid),  label6, 690, 340, 80, 50);
+	gtk_grid_attach (GTK_GRID (grid),  GTK_WIDGET(entries1.PWM), 765, 340, 50, 50);
+	gtk_grid_attach (GTK_GRID (grid),  label7, 690, 370, 80, 50);
+	gtk_grid_attach (GTK_GRID (grid),  GTK_WIDGET(entries1.PMW_Duty), 765, 370, 50, 50);
+	gtk_grid_attach (GTK_GRID (grid),  label8, 690, 400, 80, 50);
+	gtk_grid_attach (GTK_GRID (grid),  GTK_WIDGET(entries1.PWM_DIR), 765, 400, 50, 50);
+
+	//gtk_grid_attach (GTK_GRID (grid),  scrolled2, 700, 255, 180, 100);
+	gtk_grid_attach (GTK_GRID (grid),  send_button, 765, 450, 50, 20);
 
 	gtk_grid_set_row_spacing(GTK_GRID(grid),1);
 	gtk_grid_set_column_spacing (GTK_GRID(grid),1);

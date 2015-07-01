@@ -51,6 +51,7 @@
 							<tool command="gcc" commandLinePattern="${COMMAND} ${INPUTS} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX} ${OUTPUT} " id="cdt.managedbuild.tool.gnu.c.linker.mingw.exe.debug.1584077979" name="MinGW C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.mingw.exe.debug">
 								<option id="gnu.c.link.option.paths.249860923" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="E:/EclipseWorkplace/Fatigue_Tester_win32/lib"/>
+									<listOptionValue builtIn="false" value="&quot;E:\EclipseWorkplace\Fatigue_Tester_win32\Debug&quot;"/>
 									<listOptionValue builtIn="false" value="E:/EclipseWorkplace/Fatigue_Tester_win32/lib/vs12"/>
 									<listOptionValue builtIn="false" value="D:/gtk+/lib"/>
 								</option>
