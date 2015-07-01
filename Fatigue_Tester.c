@@ -246,6 +246,10 @@ draw_callback (GtkWidget *widget,
 	gint j=0,x_o;
 	gchar c[1];
 	gint recv[8];
+	for(j=0;j<8;j++)
+	{
+		recv[j]=0;
+	}
 
  	width = gtk_widget_get_allocated_width (widget);
   	height = gtk_widget_get_allocated_height (widget);
@@ -256,6 +260,7 @@ draw_callback (GtkWidget *widget,
 	big_sp=(height-2*Blank)/10;
 	small_sp=(height-2*Blank)/top_y;
 
+	/*
 	if(num>=1)
 	{
 		recv[0]=datas[num-1][0];
@@ -263,7 +268,7 @@ draw_callback (GtkWidget *widget,
 		if(recv[0]>recv[1]) biggest=recv[0];
 		else biggest=recv[1];
 	}
-	/*
+    */
 	if(num>=1)
 	{
 		recv[0]=datas[num-1][0];
@@ -271,16 +276,15 @@ draw_callback (GtkWidget *widget,
 		recv[2]=datas[num-1][2];
 		if(recv[0]>recv[1])
 		{
-			if(recv[3]>recv[0]) biggest=recv[3];
+			if(recv[2]>recv[0]) biggest=recv[2];
 			else biggest=recv[0];
 		}
 		else
 		{
-			if(recv[3]>recv[1]) biggest=recv[3];
+			if(recv[2]>recv[1]) biggest=recv[2];
 			else biggest=recv[1];
 		}
 	}
-	*/
 	else biggest=50;
     if(biggest>=top_y)
 	{
@@ -364,6 +368,16 @@ draw_callback (GtkWidget *widget,
 			next++;
 			cairo_line_to(cr,next,height-Blank-recv[1]*small_sp);
 			last_point[1]=recv[1];
+		    cairo_stroke(cr);
+
+		    next--;
+	       	cairo_set_source_rgb(cr,0,0,1);
+	    	cairo_set_line_width(cr,1.5);
+			recv[2]=datas[j][2];
+			cairo_move_to(cr,next,height-Blank-last_point[2]*small_sp);
+			next++;
+			cairo_line_to(cr,next,height-Blank-recv[2]*small_sp);
+			last_point[2]=recv[2];
 		    cairo_stroke(cr);
 		}
 		next--;
