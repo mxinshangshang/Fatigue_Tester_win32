@@ -22,6 +22,8 @@
 #include <mysql/mysql.h>
 #endif
 
+GtkWidget *report_window=NULL;
+
 #define SERVER_HOST "localhost"
 #define SERVER_USER "root"
 #define SERVER_PWD  "12345"
@@ -506,7 +508,6 @@ void send_func(const gchar *text)
 /* Get the input text,and send it */
 void on_send_button_clicked(GtkButton *button,gpointer user_data)
 {
-	//GtkTextIter start,end;
 	gchar *text;
 	struct EntryStruct1 *entry1 = (struct EntryStruct1 *)user_data;
 	const gchar *DA1 = gtk_entry_get_text(GTK_ENTRY(entry1->DA1));
@@ -528,8 +529,6 @@ void on_send_button_clicked(GtkButton *button,gpointer user_data)
 		}
 		/* get text */
 		text=g_strjoin(DA1, DA2, D0, PWM, PWM_Duty, PWM_DIR, NULL);
-		//gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(input_buffer),&start,&end);
-		//text=gtk_text_buffer_get_text(GTK_TEXT_BUFFER(input_buffer),&start,&end,FALSE);
 		/* If there is no input,do nothing but return */
 		if(strcmp(text,"")!=0)
 		{
@@ -584,6 +583,38 @@ void on_button1_clicked(GtkButton *button,gpointer user_data)
 	}
 }
 
+GtkWidget *create_test_window()
+{ //创建一个测试窗口
+
+   GtkWidget *report_window;
+   GtkWidget *fixed;
+   GtkWidget *button;
+
+   report_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+   gtk_window_set_default_size(GTK_WINDOW(report_window), 300, 200);
+   fixed = gtk_fixed_new();
+
+   button=gtk_button_new_with_label("改变主窗口label文字");
+   gtk_fixed_put(GTK_FIXED(fixed), button, 50, 50);
+   gtk_widget_set_size_request(button, 80, 65);
+
+   gtk_container_add(GTK_CONTAINER(report_window), fixed);
+
+   //gtk_widget_show(window);
+   //g_signal_connect(G_OBJECT(window_test),"delete_event",G_CALLBACK(delete_event), NULL); //注意这里不是“destroy” 事件
+   //g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(change_label_text), NULL);
+
+   //gtk_main();
+   //return 0;
+   return report_window;
+}
+
+/* pre_report_button button function */
+void on_pre_report_button_clicked(GtkButton *button,gpointer user_data)
+{
+	gtk_widget_show_all(report_window);
+}
+
 char *_(char *c)
 {
     return(g_locale_to_utf8(c,-1,0,0,0));
@@ -592,10 +623,10 @@ char *_(char *c)
 
 int main (int argc,char *argv[])
 {
-	int i=0;
+	gint i=0;
 	GtkWidget *window;
 	GtkWidget *label1,*label2,*label3,*label4,*label5,*label6,*label7,*label8,*label9;
-	GtkWidget *conn_button,*close_button,*send_button;
+	GtkWidget *conn_button,*close_button,*send_button,*pre_report_button;
 	GtkWidget *rece_view;
 	GtkWidget *da;
 
@@ -618,6 +649,7 @@ int main (int argc,char *argv[])
 	}
 
 	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+	report_window=create_test_window();
 	gtk_window_set_title (GTK_WINDOW (window), "Window For Fatigue-Test");
 	gtk_container_set_border_width (GTK_CONTAINER (window), 0);
 	gtk_widget_set_size_request (window, 800, 600);
@@ -663,8 +695,6 @@ int main (int argc,char *argv[])
 	gtk_entry_set_alignment(GTK_ENTRY(entries1.PWM_Duty), 1);
 	gtk_entry_set_alignment(GTK_ENTRY(entries1.PWM_DIR), 1);
 
-	g_signal_connect (G_OBJECT(da), "draw",G_CALLBACK (draw_callback), NULL);
-    g_signal_connect (G_OBJECT(da),"configure-event",G_CALLBACK (draw_configure_event), NULL);
     g_timeout_add(10, (GSourceFunc) time_handler, (gpointer) da);
 
 	/* get the buffer of textbox */
@@ -678,6 +708,9 @@ int main (int argc,char *argv[])
 	/* setting of window */
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled1),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
 
+	g_signal_connect (G_OBJECT(da), "draw",G_CALLBACK (draw_callback), NULL);
+    g_signal_connect (G_OBJECT(da),"configure-event",G_CALLBACK (draw_configure_event), NULL);
+
 	send_button= gtk_button_new_with_label ("Send");
 	g_signal_connect(G_OBJECT(send_button), "clicked", G_CALLBACK(on_send_button_clicked),(gpointer) &entries1);
 	conn_button = gtk_button_new_with_label ("Connect");
@@ -688,6 +721,9 @@ int main (int argc,char *argv[])
 	gtk_button_set_relief (GTK_BUTTON (close_button), GTK_RELIEF_NONE);
 	g_signal_connect_swapped (G_OBJECT (close_button), "clicked",G_CALLBACK (destroy),(gpointer) window);
 	g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(destroy), NULL);
+
+	pre_report_button= gtk_button_new_with_label ("Prepare report");
+	g_signal_connect(G_OBJECT(pre_report_button), "clicked",G_CALLBACK (on_pre_report_button_clicked),(gpointer) surface);
 
 	menu=gtk_menu_new();
 	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_NEW,accel_group);
@@ -764,6 +800,7 @@ int main (int argc,char *argv[])
 	gtk_grid_attach (GTK_GRID (grid),  GTK_WIDGET(entries1.PWM_DIR), 765, 400, 50, 50);
 
 	gtk_grid_attach (GTK_GRID (grid),  send_button, 765, 450, 50, 20);
+	gtk_grid_attach (GTK_GRID (grid),  pre_report_button, 765, 480, 50, 20);
 
 	gtk_grid_set_row_spacing(GTK_GRID(grid),1);
 	gtk_grid_set_column_spacing (GTK_GRID(grid),1);
