@@ -1,7 +1,21 @@
+/**************************************************************************************
+*  File name:      Fatigue_Tester.c
+*  Author:         Mxin Chiang
+*  Version:        1.0
+*  Date:           07.05.2015
+*  Description:    Design a software accepts data sent from fatigue testing machine,
+*                  waveform presentation, recording in MySQL database,
+*                  data processing and generate pdf reports.
+*  Others:
+*  Function List:
+***************************************************************************************/
+
 #include <gtk/gtk.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <cairo-pdf.h>
 
 #define _WIN32_ 1    /* Compile for WIN32 */
 //#define _LINUX_ 1    /* Compile for Linux */
@@ -22,8 +36,6 @@
 #include <mysql/mysql.h>
 #endif
 
-GtkWidget *report_window=NULL;
-
 #define SERVER_HOST "localhost"
 #define SERVER_USER "root"
 #define SERVER_PWD  "12345"
@@ -31,12 +43,17 @@ GtkWidget *report_window=NULL;
 #define DB_NAME     "fatigue_test_db"
 #define TABLE_NAME  "mytables"
 
+//#define CAIRO_HAS_PDF_SURFACE 1
+
 int check_tbl(MYSQL* mysql,gchar *name);
 int check_db(MYSQL *mysql,gchar *db_name);
 
 gint **datas;
 gint num=0;
+time_t now;
+struct tm *curTime;
 
+GtkWidget *report_window=NULL;
 GSocket *sock;
 gint issucceed=-1;
 #define MAXSIZE 2048
@@ -67,6 +84,11 @@ struct EntryStruct1
 	GtkEntry *PWM_Duty;
 	GtkEntry *PWM_DIR;
 };
+
+/***************************************************************************************
+*    Function:
+*    Description:  Database Operations
+***************************************************************************************/
 
 int init_db()
 {
@@ -211,6 +233,11 @@ void send_to_mysql(gint rcvd_mess[])
     }
 }
 
+/***************************************************************************************
+*    Function:
+*    Description:  waveform presentation
+***************************************************************************************/
+
 /* Create a new surface of the appropriate size to store our scribbles */
 static gboolean
 draw_configure_event (GtkWidget         *widget,
@@ -228,7 +255,6 @@ draw_configure_event (GtkWidget         *widget,
                                                CAIRO_CONTENT_COLOR,
                                                allocation.width,
                                                allocation.height);
-
   /* Initialize the surface to white */
   cr = cairo_create (surface);
   cairo_set_source_rgb (cr, 1, 1, 1);
@@ -297,7 +323,7 @@ draw_callback (GtkWidget *widget,
 		cairo_line_to(cr,width-Blank,i);
 		cairo_move_to(cr,Blank-16,i);
 		cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
-		cairo_set_font_size (cr, 12.0);
+		cairo_set_font_size (cr, 10.0);
 		gcvt(y, 4, c);
 		y=y+top_y/10;
 		cairo_show_text(cr,c);
@@ -317,7 +343,7 @@ draw_callback (GtkWidget *widget,
 		cairo_line_to(cr,i,height-Blank+6);
 		cairo_move_to(cr,i,height-Blank+16);
 		cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
-		cairo_set_font_size (cr, 12.0);
+		cairo_set_font_size (cr, 10.0);
 		gcvt(x, 4, c);
 		x=x+100;
 		cairo_show_text(cr,c);
@@ -385,10 +411,14 @@ gboolean time_handler (GtkWidget *widget)
 
   if (!timer) return FALSE;
 
-  gtk_widget_queue_draw_area(widget,0,0,800,500);
+  gtk_widget_queue_draw_area(widget,0,0,850,550);
   return TRUE;
 }
 
+/***************************************************************************************
+*    Function:
+*    Description:  textview presentation
+***************************************************************************************/
 
 void show_err(gchar *err)
 {
@@ -423,13 +453,10 @@ void show_local_text(const gchar* text)
 	g_free (text1);
 }
 
-/* Clean the input text */
-void on_cls_button_clicked()
-{
-	GtkTextIter start,end;
-	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(input_buffer),&start,&end);/* Retrieves the first and last iterators in the buffer */
-	gtk_text_buffer_delete(GTK_TEXT_BUFFER(input_buffer),&start,&end);
-}
+/***************************************************************************************
+*    Function:
+*    Description:  socket function
+***************************************************************************************/
 
 /* A new thread,to receive message */
 gpointer recv_func(gpointer arg)
@@ -457,6 +484,23 @@ gpointer recv_func(gpointer arg)
 	    }
 		num++;
 	 }
+}
+
+/* Send function */
+void send_func(const gchar *text)
+{
+	gint n;
+	GError *err = NULL;
+	n=g_socket_send(sock,
+	               text,
+			MAXSIZE,
+	               NULL,
+	               &err);
+	if(n<0)
+	{
+		perror("S send error\n");
+		exit(1);
+	}
 }
 
 /* Build socket connection */
@@ -488,22 +532,6 @@ int build_socket(const gchar *serv_ip,const gchar *serv_port)
     	return 1;
     }
 }
-/* Send function */
-void send_func(const gchar *text)
-{
-	gint n;
-	GError *err = NULL;
-	n=g_socket_send(sock,
-	               text,
-			MAXSIZE,
-	               NULL,
-	               &err);
-	if(n<0)
-	{
-		perror("S send error\n");
-		exit(1);
-	}
-}
 
 /* Get the input text,and send it */
 void on_send_button_clicked(GtkButton *button,gpointer user_data)
@@ -533,32 +561,13 @@ void on_send_button_clicked(GtkButton *button,gpointer user_data)
 		if(strcmp(text,"")!=0)
 		{
 			send_func(text);
-			on_cls_button_clicked();
+			//on_cls_button_clicked();
 			show_local_text(text);
 		}
 		else
 			show_err("The message can not be empty...\n");
 		free(text);
 	}
-}
-
-/* Stop the GTK+ main loop function. */
-static void destroy (GtkWidget *window,gpointer data)
-{
-	int i;
-	for(i=0;i<360000;i++)
-	{
-		g_free(datas[i]);
-	}
-	g_free(datas);
-
-	gtk_main_quit ();
-}
-
-/* Menu key test */
-void on_menu_activate(GtkMenuItem* item,gpointer data)
-{
-   	g_print("menuitem %s is pressed.\n",(gchar*)data);
 }
 
 /* Connect button function */
@@ -583,26 +592,79 @@ void on_button1_clicked(GtkButton *button,gpointer user_data)
 	}
 }
 
-GtkWidget *create_test_window()
-{ //创建一个测试窗口
 
-   GtkWidget *report_window;
-   GtkWidget *fixed;
-   GtkWidget *button;
+/***************************************************************************************
+*    Function:
+*    Description:  create report
+***************************************************************************************/
+/* Report button function */
+void on_report_button_clicked(GtkButton *button,gpointer user_data)
+{
+	gchar *filename = NULL;
+	now = time(NULL);
+	curTime = localtime(&now);
+	sprintf(filename,"%04d-%02d-%02d %02d-%02d-%02d.pdf",curTime->tm_year+1900,
+	           curTime->tm_mon+1,curTime->tm_mday,curTime->tm_hour,curTime->tm_min,
+	           curTime->tm_sec);
+
+	cairo_surface_t *report_surface;
+	cairo_t *cr;
+
+	report_surface = cairo_pdf_surface_create("helloworld.pdf", 504, 648);
+	cr = cairo_create(report_surface);
+
+	cairo_set_source_rgb(cr, 0, 0, 0);
+	cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+	cairo_set_font_size (cr, 40.0);
+
+	cairo_move_to(cr, 10.0, 50.0);
+	cairo_show_text(cr, "Disziplin ist Macht.");
+	cairo_show_page(cr);
+	cairo_surface_destroy(report_surface);
+	cairo_destroy(cr);
+}
+
+/* Create report window */
+GtkWidget *create_report_window()
+{
+	GtkWidget *report_window;
+	GtkWidget *fixed;
+	GtkWidget *report_button;
+	GtkWidget *max,*min,*run_time,*date_time,*name;
+	GtkWidget *name_label;
 
    report_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-   gtk_window_set_default_size(GTK_WINDOW(report_window), 300, 200);
+   name = gtk_entry_new ();
+   name_label = gtk_label_new ("Note Taker:");
+   gtk_window_set_title (GTK_WINDOW (report_window), "Window For Report");
+   gtk_window_set_default_size(GTK_WINDOW(report_window), 300, 450);
    fixed = gtk_fixed_new();
 
-   button=gtk_button_new_with_label("改变主窗口label文字");
-   gtk_fixed_put(GTK_FIXED(fixed), button, 50, 50);
-   gtk_widget_set_size_request(button, 80, 65);
+   max = gtk_check_button_new_with_label ("Record maximum");
+   min = gtk_check_button_new_with_label ("Record minimum");
+   run_time = gtk_check_button_new_with_label ("Record running time");
+   date_time = gtk_check_button_new_with_label ("Record running date");
+   report_button = gtk_button_new_with_label("Create report");
+   gtk_fixed_put(GTK_FIXED(fixed), name_label, 20, 20);
+   gtk_fixed_put(GTK_FIXED(fixed), name, 100, 20);
+   gtk_fixed_put(GTK_FIXED(fixed), max, 20, 50);
+   gtk_fixed_put(GTK_FIXED(fixed), min, 20, 80);
+   gtk_fixed_put(GTK_FIXED(fixed), run_time, 20, 110);
+   gtk_fixed_put(GTK_FIXED(fixed), date_time, 20, 140);
+   gtk_fixed_put(GTK_FIXED(fixed), report_button, 20, 400);
+
+   gtk_widget_set_size_request(name, 50, 20);
+   gtk_widget_set_size_request(max, 80, 20);
+   gtk_widget_set_size_request(min, 80, 20);
+   gtk_widget_set_size_request(run_time, 80, 20);
+   gtk_widget_set_size_request( date_time, 80, 20);
+   gtk_widget_set_size_request(report_button, 80, 20);
 
    gtk_container_add(GTK_CONTAINER(report_window), fixed);
 
-   //gtk_widget_show(window);
+   //gtk_widget_show(report_window);
    //g_signal_connect(G_OBJECT(window_test),"delete_event",G_CALLBACK(delete_event), NULL); //注意这里不是“destroy” 事件
-   //g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(change_label_text), NULL);
+   g_signal_connect(G_OBJECT(report_button),"clicked",G_CALLBACK(on_report_button_clicked), NULL);//(gpointer) surface);
 
    //gtk_main();
    //return 0;
@@ -612,14 +674,41 @@ GtkWidget *create_test_window()
 /* pre_report_button button function */
 void on_pre_report_button_clicked(GtkButton *button,gpointer user_data)
 {
+	report_window=create_report_window();
 	gtk_widget_show_all(report_window);
 }
 
-char *_(char *c)
+/* Menu key test */
+void on_menu_activate(GtkMenuItem* item,gpointer data)
+{
+   	g_print("menuitem %s is pressed.\n",(gchar*)data);
+}
+
+gchar *_(gchar *c)
 {
     return(g_locale_to_utf8(c,-1,0,0,0));
 }
 
+/* Clean the input text */
+void on_cls_button_clicked()
+{
+	GtkTextIter start,end;
+	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(input_buffer),&start,&end);/* Retrieves the first and last iterators in the buffer */
+	gtk_text_buffer_delete(GTK_TEXT_BUFFER(input_buffer),&start,&end);
+}
+
+/* Stop the GTK+ main loop function. */
+static void destroy (GtkWidget *window,gpointer data)
+{
+	int i;
+	for(i=0;i<360000;i++)
+	{
+		g_free(datas[i]);
+	}
+	g_free(datas);
+
+	gtk_main_quit ();
+}
 
 int main (int argc,char *argv[])
 {
@@ -649,7 +738,6 @@ int main (int argc,char *argv[])
 	}
 
 	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-	report_window=create_test_window();
 	gtk_window_set_title (GTK_WINDOW (window), "Window For Fatigue-Test");
 	gtk_container_set_border_width (GTK_CONTAINER (window), 0);
 	gtk_widget_set_size_request (window, 800, 600);
@@ -697,34 +785,38 @@ int main (int argc,char *argv[])
 
     g_timeout_add(10, (GSourceFunc) time_handler, (gpointer) da);
 
-	/* get the buffer of textbox */
+	/* Get the buffer of textbox */
 	show_buffer=gtk_text_view_get_buffer(GTK_TEXT_VIEW(rece_view));
-	/* set textbox to diseditable */
+	/* Set textbox to diseditable */
 	gtk_text_view_set_editable(GTK_TEXT_VIEW(rece_view),FALSE);
-	/* scroll window */
+	/* Scroll window */
 	scrolled1=gtk_scrolled_window_new(NULL,NULL);
-	/* create a textbox */
+	/* Create a textbox */
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled1),rece_view);
-	/* setting of window */
+	/* Setting of window */
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled1),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
 
 	g_signal_connect (G_OBJECT(da), "draw",G_CALLBACK (draw_callback), NULL);
     g_signal_connect (G_OBJECT(da),"configure-event",G_CALLBACK (draw_configure_event), NULL);
 
+    /* Create a new button that send messages */
 	send_button= gtk_button_new_with_label ("Send");
 	g_signal_connect(G_OBJECT(send_button), "clicked", G_CALLBACK(on_send_button_clicked),(gpointer) &entries1);
 	conn_button = gtk_button_new_with_label ("Connect");
 	gtk_button_set_relief (GTK_BUTTON (conn_button), GTK_RELIEF_NONE);
     g_signal_connect(G_OBJECT(conn_button), "clicked", G_CALLBACK(on_button1_clicked),(gpointer) &entries);
-	/* Create a new button that has a mnemonic key of Alt+C. */
+
+    /* Create a new button that has a mnemonic key of Alt+C. */
 	close_button = gtk_button_new_with_mnemonic ("Close");
 	gtk_button_set_relief (GTK_BUTTON (close_button), GTK_RELIEF_NONE);
 	g_signal_connect_swapped (G_OBJECT (close_button), "clicked",G_CALLBACK (destroy),(gpointer) window);
 	g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(destroy), NULL);
 
+	/* Create a new button that prepare for the report */
 	pre_report_button= gtk_button_new_with_label ("Prepare report");
 	g_signal_connect(G_OBJECT(pre_report_button), "clicked",G_CALLBACK (on_pre_report_button_clicked),(gpointer) surface);
 
+	/* Create a menuitem to expand */
 	menu=gtk_menu_new();
 	menuitem=gtk_image_menu_item_new_from_stock(GTK_STOCK_NEW,accel_group);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menu),menuitem);
@@ -774,6 +866,7 @@ int main (int argc,char *argv[])
   	gtk_menu_item_set_submenu(GTK_MENU_ITEM(rootmenu),helpmenu);
   	gtk_menu_shell_append(GTK_MENU_SHELL(menubar),rootmenu);
 
+  	/* Use grid to layout gtkWidgets */
 	gtk_window_add_accel_group(GTK_WINDOW(window),accel_group);
 	/* gtk_grid_attach (GtkGrid  *grid,GtkWidget *child,gint left,gint top,gint width,gint height); */
 	gtk_grid_attach (GTK_GRID (grid), menubar, 0, 0,825, 30);
