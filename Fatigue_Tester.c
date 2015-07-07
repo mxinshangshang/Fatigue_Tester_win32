@@ -53,21 +53,17 @@ gint num=0;
 time_t now;
 struct tm *curTime;
 
-GtkWidget *report_window=NULL;
 GSocket *sock;
 gint issucceed=-1;
 #define MAXSIZE 2048
 GtkTextBuffer *show_buffer,*input_buffer;
 gboolean timer = TRUE;
 static cairo_surface_t *surface = NULL;
+GtkWidget *report_window=NULL;
 
-gdouble width, height;
-gint top_y=50,top_x=50;
-gdouble big_sp,small_sp;
-gint biggest=0;
-gdouble Blank=25;
 gint last_point[8];
-gint next=25;
+gint biggest=0;
+gint top_y=50;
 
 struct EntryStruct
 {
@@ -84,6 +80,11 @@ struct EntryStruct1
 	GtkEntry *PWM_Duty;
 	GtkEntry *PWM_DIR;
 };
+
+gchar *_(gchar *c)
+{
+    return(g_locale_to_utf8(c,-1,0,0,0));
+}
 
 /***************************************************************************************
 *    Function:
@@ -275,6 +276,10 @@ draw_callback (GtkWidget *widget,
 	gint j=0,x_o;
 	gchar c[1];
 	gint recv[8];
+	gdouble big_sp,small_sp;
+	gdouble width, height;
+	gdouble Blank=25;
+	gint next=25;
 	for(j=0;j<8;j++)
 	{
 		recv[j]=0;
@@ -317,18 +322,19 @@ draw_callback (GtkWidget *widget,
 	cairo_set_line_width(cr,0.5);
 	cairo_rectangle (cr,Blank, Blank, width-2*Blank, height-2*Blank);/* Draw outer border */
 
-	for(i=height-Blank;i>=Blank;i=i-big_sp)/* Draw Y-axis */
+	for(i=height-Blank;i>Blank-1;i=i-big_sp)/* Draw Y-axis */
 	{
 		cairo_move_to(cr,Blank-6,i);
 		cairo_line_to(cr,width-Blank,i);
 		cairo_move_to(cr,Blank-16,i);
 		cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
-		cairo_set_font_size (cr, 10.0);
-		gcvt(y, 4, c);
+		cairo_set_font_size (cr, 12.0);
+		//gcvt(y, 4, c);
+		sprintf(c, "%.0lf", y);
 		y=y+top_y/10;
 		cairo_show_text(cr,c);
 	}
-	for(i=height-Blank;i>=Blank;i=i-small_sp)
+	for(i=height-Blank;i>Blank;i=i-small_sp)
 	{
 		cairo_move_to(cr,Blank-3,i);
 		cairo_line_to(cr,Blank,i);
@@ -337,14 +343,15 @@ draw_callback (GtkWidget *widget,
 	{
 		x=((num-700)/100+1)*100;
 	}
-	for(i=Blank;i<(width-Blank);i=i+100)/* Draw X-axis */
+	for(i=Blank;i<=(width-Blank);i=i+100)/* Draw X-axis */
 	{
 		cairo_move_to(cr,i,Blank);
 		cairo_line_to(cr,i,height-Blank+6);
-		cairo_move_to(cr,i,height-Blank+16);
+		cairo_move_to(cr,i-10,height-Blank+16);
 		cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
-		cairo_set_font_size (cr, 10.0);
-		gcvt(x, 4, c);
+		cairo_set_font_size (cr, 12.0);
+		//gcvt(x, 4, c);
+		sprintf(c, "%.0lf", x);
 		x=x+100;
 		cairo_show_text(cr,c);
 	}
@@ -592,33 +599,157 @@ void on_button1_clicked(GtkButton *button,gpointer user_data)
 	}
 }
 
-
 /***************************************************************************************
 *    Function:
 *    Description:  create report
 ***************************************************************************************/
+
+static void
+check_toggled (GtkToggleButton *check1, gpointer user_data)
+{
+	g_print("checkbox %s is pressed.\n",(gchar *)user_data);
+}
+
 /* Report button function */
 void on_report_button_clicked(GtkButton *button,gpointer user_data)
 {
-	gchar *filename = NULL;
-	now = time(NULL);
-	curTime = localtime(&now);
-	sprintf(filename,"%04d-%02d-%02d %02d-%02d-%02d.pdf",curTime->tm_year+1900,
-	           curTime->tm_mon+1,curTime->tm_mday,curTime->tm_hour,curTime->tm_min,
-	           curTime->tm_sec);
-
 	cairo_surface_t *report_surface;
 	cairo_t *cr;
+	gdouble i=0,x=0,y=0,Blank=25,next=25;
+	gdouble big_sp,small_sp,width, height;
+	gint j=0,x_o;
+	gchar c[4];
+	gint recv[8];
 
-	report_surface = cairo_pdf_surface_create("helloworld.pdf", 504, 648);
+	report_surface = cairo_pdf_surface_create("HelloWorld.pdf", 595.28, 765.35);
 	cr = cairo_create(report_surface);
+  	cairo_set_source_surface (cr, surface, 0, 0);
+   	cairo_paint (cr);
 
-	cairo_set_source_rgb(cr, 0, 0, 0);
-	cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-	cairo_set_font_size (cr, 40.0);
+ 	width = 400;
+  	height = 400;
 
-	cairo_move_to(cr, 10.0, 50.0);
-	cairo_show_text(cr, "Disziplin ist Macht.");
+	for(j=0;j<8;j++)
+	{
+		recv[j]=0;
+	}
+
+	big_sp=(height-2*Blank)/10;
+	small_sp=(height-2*Blank)/top_y;
+
+	if(num>=1) /* Calculate the maximum of current data */
+	{
+		recv[0]=datas[num-1][0];
+		recv[1]=datas[num-1][1];
+		recv[2]=datas[num-1][2];
+		if(recv[0]>recv[1])
+		{
+			if(recv[2]>recv[0]) biggest=recv[2];
+			else biggest=recv[0];
+		}
+		else
+		{
+			if(recv[2]>recv[1]) biggest=recv[2];
+			else biggest=recv[1];
+		}
+	}
+	else biggest=50;
+    if(biggest>=top_y) /*Adjust the space of axis */
+	{
+		top_y=biggest/50*50+50;
+		big_sp=(height-2*Blank)/10;
+		small_sp=(height-2*Blank)/top_y;
+	}
+
+   	cairo_set_source_rgb(cr,0,0,0);
+	cairo_set_line_width(cr,0.5);
+	cairo_rectangle (cr,Blank, Blank, width-2*Blank, height-2*Blank);/* Draw outer border */
+
+	for(i=height-Blank;i>Blank-1;i=i-big_sp)/* Draw Y-axis */
+	{
+		cairo_move_to(cr,Blank-6,i);
+		cairo_line_to(cr,width-Blank,i);
+		cairo_move_to(cr,Blank-16,i);
+		cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
+		cairo_set_font_size (cr, 12.0);
+		sprintf(c, "%.0lf", y);
+		y=y+top_y/10;
+		cairo_show_text(cr,c);
+	}
+	for(i=height-Blank;i>Blank;i=i-small_sp)
+	{
+		cairo_move_to(cr,Blank-3,i);
+		cairo_line_to(cr,Blank,i);
+	}
+	if(num>700)
+	{
+		x=((num-700)/100+1)*100;
+	}
+	for(i=Blank;i<=(width-Blank);i=i+50)/* Draw X-axis */
+	{
+		cairo_move_to(cr,i,Blank);
+		cairo_line_to(cr,i,height-Blank+6);
+		cairo_move_to(cr,i,height-Blank+16);
+		cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
+		cairo_set_font_size (cr, 12.0);
+		sprintf(c, "%.0lf", x);
+		x=x+100;
+		cairo_show_text(cr,c);
+	}
+	for(i=Blank;i<(width-Blank);i=i+5)
+	{
+		cairo_move_to(cr,i,height-Blank);
+		cairo_line_to(cr,i,height-Blank+3);
+	}
+    cairo_stroke(cr);
+
+    if(datas[0]!=NULL)
+    {
+    	for(j=0;j<8;j++)
+    	{
+    		last_point[j]=0;
+    	}
+
+		if(num>700)/* X-axis starting value adjustment */
+		{
+			x_o=((num-700)/100+1)*100;
+		}
+		else x_o=0;
+
+		next=48;
+		for(j=x_o;j<num;j++)
+		{
+	       	cairo_set_source_rgb(cr,0,1,0);/* Draw green line pulse1 */
+	    	cairo_set_line_width(cr,1);
+			recv[0]=datas[j][0];
+			cairo_move_to(cr,next/2,height-Blank-last_point[0]*small_sp);
+			next++;
+			cairo_line_to(cr,next/2,height-Blank-recv[0]*small_sp);
+			last_point[0]=recv[0];
+		    cairo_stroke(cr);
+
+		    next--;
+	       	cairo_set_source_rgb(cr,1,0,0);/* Draw red line pulse2 */
+	    	cairo_set_line_width(cr,1);
+			recv[1]=datas[j][1];
+			cairo_move_to(cr,next/2,height-Blank-last_point[1]*small_sp);
+			next++;
+			cairo_line_to(cr,next/2,height-Blank-recv[1]*small_sp);
+			last_point[1]=recv[1];
+		    cairo_stroke(cr);
+
+		    next--;
+	       	cairo_set_source_rgb(cr,0,0,1);/* Draw blue line pulse3 */
+	    	cairo_set_line_width(cr,1);
+			recv[2]=datas[j][2];
+			cairo_move_to(cr,next/2,height-Blank-last_point[2]*small_sp);
+			next++;
+			cairo_line_to(cr,next/2,height-Blank-recv[2]*small_sp);
+			last_point[2]=recv[2];
+		    cairo_stroke(cr);
+		}
+		next--;
+    }
 	cairo_show_page(cr);
 	cairo_surface_destroy(report_surface);
 	cairo_destroy(cr);
@@ -662,31 +793,31 @@ GtkWidget *create_report_window()
 
    gtk_container_add(GTK_CONTAINER(report_window), fixed);
 
-   //gtk_widget_show(report_window);
-   //g_signal_connect(G_OBJECT(window_test),"delete_event",G_CALLBACK(delete_event), NULL); //注意这里不是“destroy” 事件
+   g_signal_connect (G_OBJECT (max), "toggled",G_CALLBACK (check_toggled),(gpointer) max);
+   g_signal_connect (G_OBJECT (min), "toggled",G_CALLBACK (check_toggled),(gpointer) min);
+   g_signal_connect (G_OBJECT (run_time), "toggled",G_CALLBACK (check_toggled),(gpointer) run_time);
+   g_signal_connect (G_OBJECT (date_time), "toggled",G_CALLBACK (check_toggled),(gpointer) date_time);
    g_signal_connect(G_OBJECT(report_button),"clicked",G_CALLBACK(on_report_button_clicked), NULL);//(gpointer) surface);
 
-   //gtk_main();
-   //return 0;
    return report_window;
 }
 
 /* pre_report_button button function */
 void on_pre_report_button_clicked(GtkButton *button,gpointer user_data)
 {
-	report_window=create_report_window();
+	report_window = create_report_window();
 	gtk_widget_show_all(report_window);
 }
+
+/***************************************************************************************
+*    Function:
+*    Description:
+***************************************************************************************/
 
 /* Menu key test */
 void on_menu_activate(GtkMenuItem* item,gpointer data)
 {
    	g_print("menuitem %s is pressed.\n",(gchar*)data);
-}
-
-gchar *_(gchar *c)
-{
-    return(g_locale_to_utf8(c,-1,0,0,0));
 }
 
 /* Clean the input text */
@@ -764,9 +895,6 @@ int main (int argc,char *argv[])
 	rece_view = gtk_text_view_new ();
 	da = gtk_drawing_area_new();
 	accel_group=gtk_accel_group_new();
-
- 	width = gtk_widget_get_allocated_width (da);
-  	height = gtk_widget_get_allocated_height (da);
 
 	gtk_entry_set_text(GTK_ENTRY(entries.IP), "127.0.0.1");
 	gtk_entry_set_text(GTK_ENTRY(entries.Port), "8500");
