@@ -631,7 +631,7 @@ void on_report_button_clicked(GtkButton *button,gpointer user_data)
 	cairo_surface_t *report_surface;
 	cairo_t *cr;
 	gdouble i=0,x=0,y=0,Blank=25,next=25;
-	gdouble big_sp,small_sp,width, height, tr_down;
+	gdouble big_sp,small_sp,width, height, tr_down, tr_right;
 	gint j=0,x_o;
 	gchar c[4];
 	gint recv[8];
@@ -676,17 +676,66 @@ void on_report_button_clicked(GtkButton *button,gpointer user_data)
 		small_sp=(height-2*Blank)/top_y;
 	}
 
-	tr_down = 300;
+    cairo_move_to(cr,230,50);
+    cairo_set_source_rgb(cr,0,0,0);
+    cairo_select_font_face (cr, "Georgia", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    cairo_set_font_size (cr, 20);
+    cairo_show_text (cr, "Testing Report");
+    cairo_stroke(cr);
+
+	tr_down = 80;
+	tr_right = 100;
+
+    if(TRUE==has_max)
+    {
+    	tr_down = tr_down + 30;
+        cairo_move_to(cr,40,tr_down);
+        cairo_set_source_rgb(cr,0,0,0);
+        cairo_select_font_face (cr, "Georgia", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+        cairo_set_font_size (cr, 12);
+        cairo_show_text (cr, "max value:");
+        cairo_stroke(cr);
+    }
+    if(TRUE==has_min)
+    {
+    	tr_down = tr_down + 30;
+        cairo_move_to(cr,40,tr_down);
+        cairo_set_source_rgb(cr,0,0,0);
+        cairo_select_font_face (cr, "Georgia", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+        cairo_set_font_size (cr, 12);
+        cairo_show_text (cr, "min value:");
+        cairo_stroke(cr);
+    }
+    if(TRUE==has_date_time)
+    {
+    	tr_down = tr_down + 30;
+        cairo_move_to(cr,40,tr_down);
+        cairo_set_source_rgb(cr,0,0,0);
+        cairo_select_font_face (cr, "Georgia", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+        cairo_set_font_size (cr, 12);
+        cairo_show_text (cr, "date time:");
+        cairo_stroke(cr);
+    }
+    if(TRUE==has_run_time)
+    {
+    	tr_down = tr_down + 30;
+        cairo_move_to(cr,40,tr_down);
+        cairo_set_source_rgb(cr,0,0,0);
+        cairo_select_font_face (cr, "Georgia", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+        cairo_set_font_size (cr, 12);
+        cairo_show_text (cr, "running time:");
+        cairo_stroke(cr);
+    }
 
    	cairo_set_source_rgb(cr,0,0,0);
 	cairo_set_line_width(cr,0.5);
-	cairo_rectangle (cr,Blank, tr_down + Blank, width-2*Blank, height-2*Blank);/* Draw outer border */
+	cairo_rectangle (cr,Blank + tr_right, tr_down + Blank, width-2*Blank, height-2*Blank);/* Draw outer border */
 
 	for(i = tr_down + height-Blank;i>tr_down + Blank-1;i=i-big_sp)/* Draw Y-axis */
 	{
-		cairo_move_to(cr,Blank-6,i);
-		cairo_line_to(cr,width-Blank,i);
-		cairo_move_to(cr,Blank-16,i);
+		cairo_move_to(cr,Blank+ tr_right-6,i);
+		cairo_line_to(cr,width+ tr_right-Blank,i);
+		cairo_move_to(cr,Blank+ tr_right-16,i);
 		cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
 		cairo_set_font_size (cr, 12.0);
 		sprintf(c, "%.0lf", y);
@@ -695,14 +744,14 @@ void on_report_button_clicked(GtkButton *button,gpointer user_data)
 	}
 	for(i=tr_down + height-Blank;i>tr_down + Blank;i=i-small_sp)
 	{
-		cairo_move_to(cr,Blank-3,i);
-		cairo_line_to(cr,Blank,i);
+		cairo_move_to(cr,Blank+ tr_right-3,i);
+		cairo_line_to(cr,Blank+ tr_right,i);
 	}
 	if(num>700)
 	{
 		x=((num-700)/100+1)*100;
 	}
-	for(i=Blank;i<=(width-Blank);i=i+50)/* Draw X-axis */
+	for(i=Blank+ tr_right;i<=(width+ tr_right - Blank);i=i+50)/* Draw X-axis */
 	{
 		cairo_move_to(cr,i,tr_down + Blank);
 		cairo_line_to(cr,i,tr_down + height-Blank+6);
@@ -713,7 +762,7 @@ void on_report_button_clicked(GtkButton *button,gpointer user_data)
 		x=x+100;
 		cairo_show_text(cr,c);
 	}
-	for(i=Blank;i<(width-Blank);i=i+5)
+	for(i=Blank+ tr_right;i<(width+ tr_right - Blank);i=i+5)
 	{
 		cairo_move_to(cr,i,tr_down + height-Blank);
 		cairo_line_to(cr,i,tr_down + height-Blank+3);
@@ -737,31 +786,31 @@ void on_report_button_clicked(GtkButton *button,gpointer user_data)
 		for(j=x_o;j<num;j++)
 		{
 	       	cairo_set_source_rgb(cr,0,1,0);/* Draw green line pulse1 */
-	    	cairo_set_line_width(cr,1);
+	    	cairo_set_line_width(cr,1.2);
 			recv[0]=datas[j][0];
-			cairo_move_to(cr,next/2,tr_down + height-Blank-last_point[0]*small_sp);
+			cairo_move_to(cr,next/2+ tr_right,tr_down + height-Blank-last_point[0]*small_sp);
 			next++;
-			cairo_line_to(cr,next/2,tr_down + height-Blank-recv[0]*small_sp);
+			cairo_line_to(cr,next/2+ tr_right,tr_down + height-Blank-recv[0]*small_sp);
 			last_point[0]=recv[0];
 		    cairo_stroke(cr);
 
 		    next--;
 	       	cairo_set_source_rgb(cr,1,0,0);/* Draw red line pulse2 */
-	    	cairo_set_line_width(cr,1);
+	    	cairo_set_line_width(cr,1.2);
 			recv[1]=datas[j][1];
-			cairo_move_to(cr,next/2,tr_down + height-Blank-last_point[1]*small_sp);
+			cairo_move_to(cr,next/2+ tr_right,tr_down + height-Blank-last_point[1]*small_sp);
 			next++;
-			cairo_line_to(cr,next/2,tr_down + height-Blank-recv[1]*small_sp);
+			cairo_line_to(cr,next/2+ tr_right,tr_down + height-Blank-recv[1]*small_sp);
 			last_point[1]=recv[1];
 		    cairo_stroke(cr);
 
 		    next--;
 	       	cairo_set_source_rgb(cr,0,0,1);/* Draw blue line pulse3 */
-	    	cairo_set_line_width(cr,1);
+	    	cairo_set_line_width(cr,1.2);
 			recv[2]=datas[j][2];
-			cairo_move_to(cr,next/2,tr_down + height-Blank-last_point[2]*small_sp);
+			cairo_move_to(cr,next/2+ tr_right,tr_down + height-Blank-last_point[2]*small_sp);
 			next++;
-			cairo_line_to(cr,next/2,tr_down + height-Blank-recv[2]*small_sp);
+			cairo_line_to(cr,next/2+ tr_right,tr_down + height-Blank-recv[2]*small_sp);
 			last_point[2]=recv[2];
 		    cairo_stroke(cr);
 		}
