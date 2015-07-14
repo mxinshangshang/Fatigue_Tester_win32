@@ -243,7 +243,7 @@ void send_to_mysql(gint rcvd_mess[])
 *    Description:  waveform presentation
 ***************************************************************************************/
 
-/* Create a new surface of the appropriate size to store our scribbles */
+/* Create a new surface of the appropriate size to store our waveform */
 static gboolean
 draw_configure_event (GtkWidget         *widget,
                       GdkEventConfigure *event,
@@ -329,7 +329,7 @@ draw_callback (GtkWidget *widget,
 	{
 		cairo_move_to(cr,Blank-6,i);
 		cairo_line_to(cr,width-Blank,i);
-		cairo_move_to(cr,Blank-16,i);
+		cairo_move_to(cr,Blank-25,i);
 		cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
 		cairo_set_font_size (cr, 12.0);
 		sprintf(c, "%.0lf", y);
@@ -735,7 +735,7 @@ void on_report_button_clicked(GtkButton *button,gpointer user_data)
 	{
 		cairo_move_to(cr,Blank+ tr_right-6,i);
 		cairo_line_to(cr,width+ tr_right-Blank,i);
-		cairo_move_to(cr,Blank+ tr_right-16,i);
+		cairo_move_to(cr,Blank+ tr_right-20,i);
 		cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
 		cairo_set_font_size (cr, 12.0);
 		sprintf(c, "%.0lf", y);
@@ -935,7 +935,7 @@ int main (int argc,char *argv[])
 	}
 
 	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title (GTK_WINDOW (window), "Window For Fatigue-Test");
+	gtk_window_set_title (GTK_WINDOW (window), "Window For Fatigue-Test");//"Window For Cairo Show");
 	gtk_container_set_border_width (GTK_CONTAINER (window), 0);
 	gtk_widget_set_size_request (window, 800, 600);
 
