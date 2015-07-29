@@ -41,8 +41,6 @@
 									<listOptionValue builtIn="false" value="D:/gtk+/include/gdk-pixbuf-2.0"/>
 									<listOptionValue builtIn="false" value="D:/gtk+/include/glib-2.0"/>
 									<listOptionValue builtIn="false" value="D:/gtk+/lib/glib-2.0/include"/>
-									<listOptionValue builtIn="false" value="D:/pthreads-w32-2-9-1-release/Pre-built.2/include"/>
-									<listOptionValue builtIn="false" value="&quot;D:\pthreads-w32-2-9-1-release\Pre-built.2\include&quot;"/>
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.787110366" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -mms-bitfields" valueType="string"/>
 								<option id="gnu.c.compiler.option.dialect.std.913639357" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" value="gnu.c.compiler.dialect.default" valueType="enumerated"/>
@@ -51,7 +49,7 @@
 							<tool command="gcc" commandLinePattern="${COMMAND} ${INPUTS} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX} ${OUTPUT} " id="cdt.managedbuild.tool.gnu.c.linker.mingw.exe.debug.1584077979" name="MinGW C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.mingw.exe.debug">
 								<option id="gnu.c.link.option.paths.249860923" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="E:/EclipseWorkplace/Fatigue_Tester_win32/lib"/>
-									<listOptionValue builtIn="false" value="&quot;E:\EclipseWorkplace\Fatigue_Tester_win32\Debug&quot;"/>
+									<listOptionValue builtIn="false" value="E:/EclipseWorkplace/Fatigue_Tester_win32/Debug"/>
 									<listOptionValue builtIn="false" value="E:/EclipseWorkplace/Fatigue_Tester_win32/lib/vs12"/>
 									<listOptionValue builtIn="false" value="D:/gtk+/lib"/>
 								</option>
@@ -117,6 +115,8 @@
 								<option defaultValue="gnu.c.optimization.level.most" id="gnu.c.compiler.mingw.exe.release.option.optimization.level.1967497949" name="Optimization Level" superClass="gnu.c.compiler.mingw.exe.release.option.optimization.level" valueType="enumerated"/>
 								<option id="gnu.c.compiler.mingw.exe.release.option.debugging.level.951336826" name="Debug Level" superClass="gnu.c.compiler.mingw.exe.release.option.debugging.level" value="gnu.c.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.161500506" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="E:/EclipseWorkplace/Fatigue_Tester_win32/include"/>
+									<listOptionValue builtIn="false" value="E:/EclipseWorkplace/Fatigue_Tester_win32/include/mysql"/>
 									<listOptionValue builtIn="false" value="D:/gtk+/include/gtk-3.0"/>
 									<listOptionValue builtIn="false" value="D:/gtk+/include/cairo"/>
 									<listOptionValue builtIn="false" value="D:/gtk+/include/pango-1.0"/>
@@ -133,30 +133,29 @@
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.mingw.exe.release.1342760044" name="MinGW C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.mingw.exe.release">
 								<option id="gnu.c.link.option.paths.524249834" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
+									<listOptionValue builtIn="false" value="E:/EclipseWorkplace/Fatigue_Tester_win32/Debug"/>
 									<listOptionValue builtIn="false" value="D:/gtk+/lib"/>
-									<listOptionValue builtIn="false" value="D:/pthreads-w32-2-9-1-release/Pre-built.2/lib"/>
 								</option>
 								<option id="gnu.c.link.option.libs.862779830" name="Libraries (-l)" superClass="gnu.c.link.option.libs" valueType="libs">
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\atk-1.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\cairo.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\fontconfig.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\gailutil.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\gdk_pixbuf-2.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\gdk-win32-3.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\gio-2.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\glib-2.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\gmodule-2.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\gobject-2.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\gthread-2.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\gtk-win32-3.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\pango-1.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\pangocairo-1.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\pangoft2-1.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="&quot;D:\gtk+\lib\pangowin32-1.0.lib&quot;"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="pthreadVC2"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="pthreadVCE2"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="pthreadVSE2"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="ws2_32"/>
+									<listOptionValue builtIn="false" value="libmysql"/>
+									<listOptionValue builtIn="false" value="mysqlclient"/>
+									<listOptionValue builtIn="false" value="atk-1.0"/>
+									<listOptionValue builtIn="false" value="cairo"/>
+									<listOptionValue builtIn="false" value="fontconfig"/>
+									<listOptionValue builtIn="false" value="gailutil"/>
+									<listOptionValue builtIn="false" value="gdk_pixbuf-2.0"/>
+									<listOptionValue builtIn="false" value="gdk-win32-3.0"/>
+									<listOptionValue builtIn="false" value="gio-2.0"/>
+									<listOptionValue builtIn="false" value="glib-2.0"/>
+									<listOptionValue builtIn="false" value="gmodule-2.0"/>
+									<listOptionValue builtIn="false" value="gobject-2.0"/>
+									<listOptionValue builtIn="false" value="gthread-2.0"/>
+									<listOptionValue builtIn="false" value="gtk-win32-3.0"/>
+									<listOptionValue builtIn="false" value="pango-1.0"/>
+									<listOptionValue builtIn="false" value="pangocairo-1.0"/>
+									<listOptionValue builtIn="false" value="pangoft2-1.0"/>
+									<listOptionValue builtIn="false" value="pangowin32-1.0"/>
+									<listOptionValue builtIn="false" value="ws2_32"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1501207402" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>

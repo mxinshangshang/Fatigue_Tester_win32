@@ -219,7 +219,7 @@ void send_to_mysql(gint rcvd_mess[])
 
         if (!res)
         {
-        	g_print("Inserted %lu rows\n", (unsigned long)mysql_affected_rows(&my_connection));
+        	//g_print("Inserted %lu rows\n", (unsigned long)mysql_affected_rows(&my_connection));
         }
         else
         {
@@ -417,7 +417,7 @@ gboolean time_handler (GtkWidget *widget)
 {
   if (surface == NULL) return FALSE;
 
-  if (!timer) return FALSE;
+  //if (!timer) return FALSE;
 
   gtk_widget_queue_draw_area(widget,0,0,850,550);
   return TRUE;
@@ -485,7 +485,7 @@ gpointer recv_func(gpointer arg)
 			exit(1);
 		}
 	    send_to_mysql(bufferIn); /* Record in the database */
-	    g_print("Messages:  %d %d %d %d %d %d %d %d\n",bufferIn[0],bufferIn[1],bufferIn[2],bufferIn[3],bufferIn[4],bufferIn[5],bufferIn[6],bufferIn[7]);
+	    //g_print("Messages:  %d %d %d %d %d %d %d %d\n",bufferIn[0],bufferIn[1],bufferIn[2],bufferIn[3],bufferIn[4],bufferIn[5],bufferIn[6],bufferIn[7]);
 	    for(i=0;i<8;i++)
 	    {
 	    	datas[num][i]=bufferIn[i];
