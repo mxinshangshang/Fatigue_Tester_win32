@@ -472,9 +472,9 @@ draw_callback2 (GtkWidget *widget,
   	cairo_set_source_rgb (cr, 0, 0, 0);
 
    	double xc = width/2;
-   	double yc = height;
-   	double radius = width/2-10;
-   	double angle1 = 0.0  * (M_PI/180.0);  /* angles are specified */
+   	double yc = height/2;
+   	double radius = width/2-35;
+   	double angle1 = 179.9 * (M_PI/180.0);  /* angles are specified */
    	double angle2 = 180.0 * (M_PI/180.0);  /* in radians           */
 
    	cairo_set_line_width (cr, 5.0);
@@ -495,7 +495,7 @@ draw_callback2 (GtkWidget *widget,
    	cairo_stroke (cr);
   	cairo_set_source_rgb (cr, 1, 0, 0);
    	cairo_set_line_width (cr, 6.0);
-   	cairo_arc (cr, xc, yc, radius-10 , (180+arc_i)* (M_PI/180.0), (180+arc_i) * (M_PI/180.0));
+   	cairo_arc (cr, xc, yc, radius-10 , (179+arc_i)* (M_PI/180.0), (180+arc_i) * (M_PI/180.0));
    	cairo_line_to (cr, xc, yc);
    	cairo_stroke (cr);
    	arc_i=arc_i+10;
