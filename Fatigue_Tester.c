@@ -11,6 +11,7 @@
 ***************************************************************************************/
 
 #include <gtk/gtk.h>
+#include <gdk/gdk.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -562,28 +563,28 @@ void show_local_text(const gchar* text)
 /* A new thread,to receive message */
 gpointer recv_func(gpointer arg)
 {
-	 gchar rcvd_mess[MAXSIZE];
+	 //gchar rcvd_mess[MAXSIZE];
 	 gint bufferIn[8];
-	 gint i;
+	 //gint i;
 	 GInputVector vector;
 	 GError *error = NULL;
 	 vector.buffer = bufferIn;
 	 vector.size = 32;
 	 while(1)
 	 {
-		memset(rcvd_mess,0,MAXSIZE);
+		//memset(rcvd_mess,0,MAXSIZE);
 		if(g_socket_receive(sock,vector.buffer, vector.size,NULL, &error)<0)
 		{
 			perror("server recv error\n");
 			exit(1);
 		}
-	    send_to_mysql(bufferIn); /* Record in the database */
-	    //g_print("Messages:  %d %d %d %d %d %d %d %d\n",bufferIn[0],bufferIn[1],bufferIn[2],bufferIn[3],bufferIn[4],bufferIn[5],bufferIn[6],bufferIn[7]);
-	    for(i=0;i<8;i++)
-	    {
-	    	datas[num][i]=bufferIn[i];
-	    }
-		num++;
+	    //send_to_mysql(bufferIn); /* Record in the database */
+	    g_print("Messages:  %d %d %d %d %d %d %d %d\n",bufferIn[0],bufferIn[1],bufferIn[2],bufferIn[3],bufferIn[4],bufferIn[5],bufferIn[6],bufferIn[7]);
+	    //for(i=0;i<8;i++)
+	    //{
+	    	//datas[num][i]=bufferIn[i];
+	    //}
+		//num++;
 	 }
 }
 
@@ -1056,8 +1057,8 @@ int main (int argc,char *argv[])
 	sector = gtk_drawing_area_new();
 	accel_group=gtk_accel_group_new();
 
-	gtk_entry_set_text(GTK_ENTRY(entries.IP), "127.0.0.1");
-	gtk_entry_set_text(GTK_ENTRY(entries.Port), "8500");
+	gtk_entry_set_text(GTK_ENTRY(entries.IP), "111.186.100.57");
+	gtk_entry_set_text(GTK_ENTRY(entries.Port), "8888");
 	gtk_entry_set_text(GTK_ENTRY(entries1.DA1), "0");
 	gtk_entry_set_text(GTK_ENTRY(entries1.DA2), "0");
 	gtk_entry_set_text(GTK_ENTRY(entries1.D0), "0");
